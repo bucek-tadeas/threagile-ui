@@ -252,6 +252,7 @@ cd frontend && npm run test:coverage
 | Frontend import errors | `rm -rf node_modules && npm install` |
 | Both servers won't start together | Run `make backend` and `make frontend` in separate terminals |
 
+## Affiliation
 
 <img src="https://fit.cvut.cz/static/images/fit-cvut-logo-en.svg" alt="FIT CTU logo" height="200">
 
