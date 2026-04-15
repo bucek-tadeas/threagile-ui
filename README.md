@@ -251,3 +251,9 @@ cd frontend && npm run test:coverage
 | Backend `ModuleNotFoundError` | Activate venv and `pip install -r requirements.txt -r requirements-dev.txt` |
 | Frontend import errors | `rm -rf node_modules && npm install` |
 | Both servers won't start together | Run `make backend` and `make frontend` in separate terminals |
+
+
+<img src="https://fit.cvut.cz/static/images/fit-cvut-logo-en.svg" alt="FIT CTU logo" height="200">
+
+This software was developed with the support of the **Faculty of Information Technology, Czech Technical University in Prague**.
+For more information, visit [fit.cvut.cz](https://fit.cvut.cz).
