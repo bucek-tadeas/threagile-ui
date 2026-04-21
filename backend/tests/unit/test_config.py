@@ -94,8 +94,6 @@ class TestConfigValidation:
 
 @pytest.mark.unit
 class TestGetAvailableMethods:
-    """Test get_available_methods logic."""
-
     def test_all_methods_available(self, test_env_vars):
         env_vars = {**test_env_vars, "USING_GITHUB": "true", "STORE_GITHUB_ENABLED": "true"}
         env_vars.update({
@@ -143,7 +141,6 @@ class TestGetAvailableMethods:
 
 @pytest.mark.unit
 class TestConfigDefaults:
-
     def test_default_session_ttl(self, test_env_vars):
         env_vars = dict(test_env_vars)
         del env_vars["SESSION_TTL_SECONDS"]

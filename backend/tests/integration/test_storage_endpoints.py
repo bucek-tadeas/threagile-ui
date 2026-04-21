@@ -11,10 +11,7 @@ from unittest.mock import patch
 
 @pytest.mark.integration
 class TestExecutionMethodsEndpoint:
-    """Test /execution-methods endpoint."""
-
     def test_get_execution_methods_all_enabled(self, test_client):
-        """Test execution methods with all features enabled."""
         with patch.dict(os.environ, {
             "USING_LOCAL_STORAGE": "true",
             "USING_GITHUB": "true",
@@ -40,7 +37,6 @@ class TestExecutionMethodsEndpoint:
             assert "server" in methods or "github" in methods
 
     def test_get_execution_methods_local_only(self, test_client):
-        """Test execution methods with only local storage enabled."""
         response = test_client.get("/execution-methods")
         
         assert response.status_code == 200
@@ -49,7 +45,6 @@ class TestExecutionMethodsEndpoint:
         assert "local" in data["methods"]
 
     def test_execution_methods_returns_json(self, test_client):
-        """Test execution methods returns proper JSON structure."""
         response = test_client.get("/execution-methods")
         
         assert response.status_code == 200
@@ -60,10 +55,8 @@ class TestExecutionMethodsEndpoint:
 
 @pytest.mark.integration
 class TestLocalPathsEndpoint:
-    """Test /local-paths endpoint."""
 
     def test_get_local_paths_success(self, test_client, tmp_allowed_path):
-        """Test get local paths returns allowed paths."""
         with patch.dict(os.environ, {
             "USING_LOCAL_STORAGE": "true",
             "ALLOWED_PATHS": str(tmp_allowed_path),
@@ -81,7 +74,6 @@ class TestLocalPathsEndpoint:
             assert isinstance(data["paths"], list)
 
     def test_get_local_paths_empty_when_disabled(self, test_client):
-        """Test local paths returns empty when local storage disabled."""
         with patch.dict(os.environ, {
             "USING_LOCAL_STORAGE": "false",
             "USING_GITHUB": "false",
@@ -101,10 +93,7 @@ class TestLocalPathsEndpoint:
 
 @pytest.mark.integration
 class TestLogoutEndpoint:
-    """Test /logout endpoint."""
-
     def test_logout_success(self, test_client):
-        """Test logout clears session."""
         response = test_client.post("/logout")
         
         assert response.status_code == 200
@@ -112,7 +101,6 @@ class TestLogoutEndpoint:
         assert data["success"] is True
 
     def test_logout_without_session(self, test_client):
-        """Test logout works even without session cookie."""
         response = test_client.post("/logout")
         
         assert response.status_code == 200
@@ -122,10 +110,7 @@ class TestLogoutEndpoint:
 
 @pytest.mark.integration
 class TestCORSConfiguration:
-    """Test CORS middleware configuration."""
-
     def test_cors_allows_localhost(self, test_client):
-        """Test CORS allows localhost origins."""
         response = test_client.get(
             "/execution-methods",
             headers={"Origin": "http://localhost:5173"}
@@ -135,7 +120,6 @@ class TestCORSConfiguration:
         assert "access-control-allow-origin" in response.headers or response.status_code == 200
 
     def test_cors_allows_credentials(self, test_client):
-        """Test CORS allows credentials."""
         response = test_client.options(
             "/execution-methods",
             headers={

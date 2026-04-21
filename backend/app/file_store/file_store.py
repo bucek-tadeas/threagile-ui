@@ -1,3 +1,4 @@
+import shutil
 import subprocess
 from pathvalidate import sanitize_filepath
 from pathlib import Path
@@ -5,6 +6,17 @@ import os
 import urllib.parse
 from app.errors import FileException, DockerException, log_error
 from app.config import get_config
+
+
+def _is_podman() -> bool:
+    docker_path = shutil.which("docker")
+    if docker_path is None:
+        return False
+    try:
+        result = subprocess.run([docker_path, "--version"], capture_output=True, text=True, timeout=10)
+        return "podman" in result.stdout.lower()
+    except Exception:
+        return False
 
 
 def secure_sanitize_filepath(filepath: str) -> str:
@@ -88,14 +100,17 @@ class StoreThreatModel:
             
             log_error("INFO", f"Executing threat model locally: {file_path}")
             
-            result = subprocess.run([
-                "docker", "run", "--rm",
-                "-v", f"{work_dir}:/app/work",
+            cmd = ["docker", "run", "--rm"]
+            if _is_podman():
+                cmd.append("--userns=keep-id")
+            cmd += [
+                "-v", f"{work_dir}:/app/work:Z",
                 "threagile/threagile",
                 "-verbose",
                 "-model", f"/app/work/{file_path.name}",
                 "-output", f"/app/work/"
-            ], capture_output=True, text=True, timeout=300)
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
             
             if result.returncode == 0:
                 log_error("INFO", f"Threat model executed successfully: {file_path}")
@@ -150,14 +165,17 @@ class StoreThreatModel:
             
             log_error("INFO", f"Executing threat model from GitHub: {github_repo}/{github_file_path}")
             
-            result = subprocess.run([
-                "docker", "run", "--rm",
-                "-v", f"{threagile_directory}:/app/work",
+            cmd = ["docker", "run", "--rm"]
+            if _is_podman():
+                cmd.append("--userns=keep-id")
+            cmd += [
+                "-v", f"{threagile_directory}:/app/work:Z",
                 "threagile/threagile",
                 "-verbose",
                 "-model", f"/app/work/{github_file_path}",
                 "-output", f"/app/work/"
-            ], capture_output=True, text=True, timeout=300)
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
             
             if result.returncode == 0:
                 log_error("INFO", f"Threat model executed successfully from GitHub: {github_repo}")

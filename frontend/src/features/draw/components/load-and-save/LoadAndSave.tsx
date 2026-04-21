@@ -76,6 +76,9 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
     const [showErrorAlert, setShowErrorAlert] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string>("");
     const [errorCode, setErrorCode] = useState<string>("");
+    const [isLoadingGithub, setIsLoadingGithub] = useState(false);
+    const [githubLoadingMessage, setGithubLoadingMessage] = useState("");
+    const [isExecuting, setIsExecuting] = useState(false);
 
     useEffect(() => {
         if (showExecuteDialog) {
@@ -102,6 +105,8 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
     useEffect(() => {
         if (showExecuteDialog && saveDest.includes("github")) {
             (async () => {
+                setIsLoadingGithub(true);
+                setGithubLoadingMessage("Fetching GitHub repositories, please wait...");
                 try {
                     await apiClient.getCurrentUser();
                     const { repos } = await apiClient.getGithubRepos();
@@ -123,6 +128,9 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
                             setShowErrorAlert(true);
                         }
                     }
+                } finally {
+                    setIsLoadingGithub(false);
+                    setGithubLoadingMessage("");
                 }
             })();
         }
@@ -276,6 +284,8 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
 
         if (!repo) return;
 
+        setIsLoadingGithub(true);
+        setGithubLoadingMessage("Fetching branches, please wait...");
         try {
             const { branches } = await apiClient.getGithubBranches(repo);
             setGithubBranchesList(branches);
@@ -286,6 +296,9 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
             setErrorCode(error.error_code || "BRANCHES_FETCH_ERROR");
             setErrorMessage(errorMsg);
             setShowErrorAlert(true);
+        } finally {
+            setIsLoadingGithub(false);
+            setGithubLoadingMessage("");
         }
     };
 
@@ -297,6 +310,8 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
 
         if (!branch || !githubRepo) return;
 
+        setIsLoadingGithub(true);
+        setGithubLoadingMessage("Fetching file paths, this might take a minute...");
         try {
             const { files } = await apiClient.getGithubFiles(githubRepo, branch);
             setGithubFilesList(["", ...files]);
@@ -307,6 +322,9 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
             setErrorCode(error.error_code || "FILES_FETCH_ERROR");
             setErrorMessage(errorMsg);
             setShowErrorAlert(true);
+        } finally {
+            setIsLoadingGithub(false);
+            setGithubLoadingMessage("");
         }
     };
 
@@ -329,7 +347,18 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
             yaml_model: yamlModel,
         };
 
+        setIsExecuting(true);
         try {
+            if (saveDest.includes("local")) {
+                const blob = new Blob([yamlModel], { type: "application/x-yaml" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = modelName || "threatmodel.yaml";
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+
             const result = await apiClient.executeThreatModel(saveConfig);
 
             if (result.success === false && result.error) {
@@ -359,6 +388,8 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
             setShowResultsDialog(true);
             setShowExecuteDialog(false);
             setSaveDest([]);
+        } finally {
+            setIsExecuting(false);
         }
     }, [
         saveDest,
@@ -455,6 +486,9 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
                 githubFilesList={githubFilesList}
                 githubOverwriteConfirmed={githubOverwriteConfirmed}
                 setGithubOverwriteConfirmed={setGithubOverwriteConfirmed}
+                isLoadingGithub={isLoadingGithub}
+                githubLoadingMessage={githubLoadingMessage}
+                isExecuting={isExecuting}
             />
 
             {showErrorAlert && (

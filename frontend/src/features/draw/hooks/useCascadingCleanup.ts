@@ -36,7 +36,6 @@ export function useCascadingCleanup({
     risksIdentifiedProvider,
 }: UseCascadingCleanupParams) {
 
-    // When a DataAsset is deleted, clean references from TechnicalAssets, CommunicationLinks, and RisksIdentified
     useEffect(() => {
         const dataAssetIds = new Set(dataAssetProvider.elements.map(e => e._internalId));
 
@@ -102,7 +101,6 @@ export function useCascadingCleanup({
         });
     }, [dataAssetProvider.elements]);
 
-    // When a TechnicalAsset is deleted, clean references from SharedRuntimes and RisksIdentified
     useEffect(() => {
         const techAssetIds = new Set(technicalAssets.map(a => a._internalId));
 
@@ -124,7 +122,6 @@ export function useCascadingCleanup({
         });
     }, [technicalAssets]);
 
-    // When a CommunicationLink is deleted, clean references from RisksIdentified
     useEffect(() => {
         const linkIds = new Set(communicationLinks.map(l => l._internalId));
 
@@ -135,7 +132,6 @@ export function useCascadingCleanup({
         });
     }, [communicationLinks]);
 
-    // When a TrustBoundary is deleted, clean references from RisksIdentified
     useEffect(() => {
         const boundaryIds = new Set(trustBoundaries.map(b => b._internalId));
 
@@ -146,7 +142,6 @@ export function useCascadingCleanup({
         });
     }, [trustBoundaries]);
 
-    // When a SharedRuntime is deleted, clean references from RisksIdentified
     useEffect(() => {
         const runtimeIds = new Set(sharedRuntimesProvider.elements.map(sr => sr._internalId));
 

@@ -2,7 +2,7 @@ import React from "react";
 import {
     Box, Button, Dialog, DialogTitle, DialogContent, DialogActions,
     TextField, FormControlLabel, Checkbox, Select, MenuItem,
-    InputLabel, FormControl,
+    InputLabel, FormControl, CircularProgress, Alert,
 } from "@mui/material";
 
 export interface ExecuteDialogProps {
@@ -30,6 +30,9 @@ export interface ExecuteDialogProps {
     githubFilesList: string[];
     githubOverwriteConfirmed: boolean;
     setGithubOverwriteConfirmed: (v: boolean) => void;
+    isLoadingGithub: boolean;
+    githubLoadingMessage: string;
+    isExecuting: boolean;
 }
 
 export const ExecuteDialog: React.FC<ExecuteDialogProps> = ({
@@ -41,6 +44,7 @@ export const ExecuteDialog: React.FC<ExecuteDialogProps> = ({
     githubBranch, onGithubBranchChange, githubBranchesList,
     githubFilePath, setGithubFilePath, githubFilesList,
     githubOverwriteConfirmed, setGithubOverwriteConfirmed,
+    isLoadingGithub, githubLoadingMessage, isExecuting,
 }) => (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
         <DialogTitle>Select execution save options</DialogTitle>
@@ -185,6 +189,12 @@ export const ExecuteDialog: React.FC<ExecuteDialogProps> = ({
                                 <strong>Final path:</strong><br />
                                 {githubRepo}/{githubFilePath || "(root)"}/{modelName} (branch: {githubBranch})
                             </Box>
+
+                            {isLoadingGithub && (
+                                <Alert severity="info" icon={<CircularProgress size={20} />} sx={{ mt: 2 }}>
+                                    {githubLoadingMessage}
+                                </Alert>
+                            )}
                         </>
                     )}
                 </Box>
@@ -192,9 +202,16 @@ export const ExecuteDialog: React.FC<ExecuteDialogProps> = ({
         </DialogContent>
 
         <DialogActions>
-            <Button onClick={onClose}>Cancel</Button>
-            <Button variant="contained" color="success" onClick={onConfirm}>
-                Run Threat Model
+            <Button onClick={onClose} disabled={isExecuting}>Cancel</Button>
+            <Button variant="contained" color="success" onClick={onConfirm} disabled={isLoadingGithub || isExecuting}>
+                {isExecuting ? (
+                    <>
+                        <CircularProgress size={20} sx={{ mr: 1, color: "inherit" }} />
+                        Executing &amp; uploading, please wait...
+                    </>
+                ) : (
+                    "Run Threat Model"
+                )}
             </Button>
         </DialogActions>
     </Dialog>

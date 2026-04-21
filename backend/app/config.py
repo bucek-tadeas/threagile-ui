@@ -86,10 +86,6 @@ class Config:
             )
     
     def get_available_methods(self) -> list[str]:
-        """        
-        Returns:
-            List of method names: "local", "server", "github"
-        """
         methods = ["local"]
         
         if self.using_local_storage and self.store_local_enabled:
