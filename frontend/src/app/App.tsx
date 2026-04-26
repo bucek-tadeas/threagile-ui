@@ -5,7 +5,6 @@ Starting point for threagile-ui
 */
 
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import WelcomePage from "@features/welcome/WelcomePage";
 import DrawPage from "@features/draw/DrawPage";
 
 import { DataAssetProvider, RisksIdentifiedProvider, SharedRuntimesProvider, RiskTrackingProvider, IndividualRiskCategoriesProvider } from "@context/ThreatModelContext";
@@ -21,8 +20,7 @@ const App = () => {
               <RiskTrackingProvider>
                 <IndividualRiskCategoriesProvider>
                   <Routes>
-                    <Route path="/" element={<WelcomePage />} />
-                    <Route path="/draw" element={<DrawPage />} />
+                    <Route path="/" element={<DrawPage />} />
                   </Routes>
                 </IndividualRiskCategoriesProvider>
               </RiskTrackingProvider>

@@ -62,7 +62,6 @@ class TestLocalPathsEndpoint:
             "ALLOWED_PATHS": str(tmp_allowed_path),
             "THREAGILE_DIRECTORY": "/tmp/threagile",
         }):
-            # Clear config cache
             import app.config
             app.config._config = None
             
@@ -79,7 +78,6 @@ class TestLocalPathsEndpoint:
             "USING_GITHUB": "false",
             "THREAGILE_DIRECTORY": "/tmp/threagile",
         }):
-            # Clear config cache
             import app.config
             app.config._config = None
 
