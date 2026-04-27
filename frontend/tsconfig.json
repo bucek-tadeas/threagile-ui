@@ -7,19 +7,18 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "baseUrl": ".",
     "paths": {
       "@features/*": [
-        "src/features/*"
+        "./src/features/*"
       ],
       "@context/*": [
-        "src/context/*"
+        "./src/context/*"
       ],
       "@components/*": [
-        "src/components/*"
+        "./src/components/*"
       ],
       "@api/*": [
-        "src/api/*"
+        "./src/api/*"
       ]
     }
   },

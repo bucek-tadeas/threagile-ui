@@ -31,9 +31,9 @@ export const AssetAndLinkMenu = ({ graph }: AssetAndLinkMenuProps) => {
     };
 
     const actions = [
-        { icon: <StorageIcon />, name: "Datastore", type: "datastore" },
-        { icon: <PublicIcon />, name: "External Entity", type: "external-entity" },
-        { icon: <MemoryIcon />, name: "Process", type: "process" },
+        { icon: <StorageIcon />, name: "Technical Asset: Datastore", type: "datastore" },
+        { icon: <PublicIcon />, name: "Technical Asset: External Entity", type: "external-entity" },
+        { icon: <MemoryIcon />, name: "Technical Asset: Process", type: "process" },
         { icon: <BorderStyleIcon />, name: "Trust Boundary", type: "trust-boundary" },
     ];
 

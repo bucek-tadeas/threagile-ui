@@ -22,26 +22,25 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
-    "baseUrl": "./src",
     "paths": {
       "@app/*": [
-        "app/*"
+        "./src/app/*"
       ],
       "@features/*": [
-        "features/*"
+        "./src/features/*"
       ],
       "@components/*": [
-        "components/*"
+        "./src/components/*"
       ],
       "@hooks/*": [
-        "hooks/*"
+        "./src/hooks/*"
       ],
       "@api/*": [
-        "api/*"
+        "./src/api/*"
       ],
       "@context/*": [
-        "context/*"
-      ],
+        "./src/context/*"
+      ]
     }
   },
   "include": [

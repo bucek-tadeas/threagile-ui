@@ -39,6 +39,7 @@ import { technicalAssetStyles } from "@components/styles/assetVertexStyles";
 import type { TechnicalAssetTypeType } from "@components/types/threagileEnums";
 import { deserializeGraph } from "./components/load-and-save/utils/deserialize";
 import { useCascadingCleanup } from "./hooks/useCascadingCleanup";
+import { useNotification } from "@context/NotificationContext";
 
 const DrawPage = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -67,6 +68,7 @@ const DrawPage = () => {
   const risksIdentifiedProvider = useRisksIdentified();
 
   const history = React.useMemo(() => new HistoryManager(50), []);
+  const { showNotification } = useNotification();
 
   useEffect(() => { selectedCellRef.current = selectedCell; }, [selectedCell]);
   useEffect(() => { formAssetValuesRef.current = formAssetValues; }, [formAssetValues]);
@@ -164,6 +166,7 @@ const DrawPage = () => {
         dataAssetProvider,
         risksIdentifiedProvider,
       },
+      (message, title) => showNotification(message, "error", title),
     );
 
     return cleanup;

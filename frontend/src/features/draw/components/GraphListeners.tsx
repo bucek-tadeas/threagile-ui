@@ -28,6 +28,7 @@ export function registerGraphListeners(
     setGraphVersion: React.Dispatch<React.SetStateAction<number>>,
     setCommonDiagram: React.Dispatch<React.SetStateAction<CommonDiagram>>,
     providers: DeserializeProviders,
+    onError: (message: string, title?: string) => void,
 ) {
     InternalEvent.disableContextMenu(container);
 
@@ -115,13 +116,13 @@ export function registerGraphListeners(
                 const result = validateDiagramFile(json);
                 if (!result.valid) {
                     console.error("Invalid diagram file:", result.errors);
-                    alert("Invalid file:\n" + result.errors.join("\n"));
+                    onError("Invalid file:\n" + result.errors.join("\n"), "Invalid File");
                     return;
                 }
 
                 deserializeGraph(g, json, setCommonInformation, setCommonDiagram, providers);
             } catch (err) {
-                alert("Error loading dropped file: " + (err as Error).message);
+                onError("Error loading dropped file: " + (err as Error).message);
             }
         };
         reader.readAsText(file);

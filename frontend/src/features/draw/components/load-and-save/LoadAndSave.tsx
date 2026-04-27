@@ -9,7 +9,7 @@ import React, { useRef, useCallback, useState, useEffect } from "react";
 import { serializeGraph } from "./utils/serialize";
 import { deserializeGraph } from "./utils/deserialize";
 import { validateDiagramFile } from "./utils/validation";
-import { Box, Grid, Button, Alert, AlertTitle } from "@mui/material";
+import { Box, Grid, Button } from "@mui/material";
 import yaml from "js-yaml";
 import type { CommonInformation, CommonDiagram } from "@components/types/threagileComponents";
 import type { DiagramFile } from "./utils/diagramInterface";
@@ -20,6 +20,7 @@ import { APIClient } from "@api/apiClient";
 import { ApiErrorHandler } from "@api/errorHandler";
 import { ExecuteDialog } from "./ExecuteDialog";
 import { ResultsDialog } from "./ResultsDialog";
+import { useNotification } from "@context/NotificationContext";
 
 const apiClient = new APIClient();
 
@@ -49,6 +50,7 @@ function deleteAllFields(providers: {
 export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformation, setCommonInformation, common_diagram, setCommonDiagram }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null);
+    const { showNotification } = useNotification();
 
     const riskTrackingProvider = useRiskTracking();
     const individualRiskCategoriesProvider = useIndividualRiskCategories();
@@ -73,9 +75,7 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
     const [modelName, setModelName] = useState("threatmodel.yaml");
     const [showResultsDialog, setShowResultsDialog] = useState(false);
     const [executionResults, setExecutionResults] = useState<any>(null);
-    const [showErrorAlert, setShowErrorAlert] = useState(false);
-    const [errorMessage, setErrorMessage] = useState<string>("");
-    const [errorCode, setErrorCode] = useState<string>("");
+
     const [isLoadingGithub, setIsLoadingGithub] = useState(false);
     const [githubLoadingMessage, setGithubLoadingMessage] = useState("");
     const [isExecuting, setIsExecuting] = useState(false);
@@ -113,9 +113,11 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
                     setGithubReposList(repos);
                 } catch (error: any) {
                     if (error.success === false) {
-                        setErrorCode(error.error_code || "GITHUB_ERROR");
-                        setErrorMessage(ApiErrorHandler.formatErrorMessage(error));
-                        setShowErrorAlert(true);
+                        showNotification(
+                            ApiErrorHandler.formatErrorMessage(error),
+                            "error",
+                            `Error [${error.error_code || "GITHUB_ERROR"}]`
+                        );
                     } else {
                         localStorage.setItem("unsaved-diagram", JSON.stringify(serializeGraph(graph, commonInformation, common_diagram, { riskTrackingProvider, individualRiskCategoriesProvider, sharedRuntimesProvider, dataAssetProvider, risksIdentifiedProvider }
                         )));
@@ -123,9 +125,7 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
                             const { url } = await apiClient.getGithubAuthUrl();
                             window.location.href = url;
                         } catch (authError) {
-                            setErrorMessage("Failed to initialize GitHub authentication");
-                            setErrorCode("AUTH_INIT_ERROR");
-                            setShowErrorAlert(true);
+                            showNotification("Failed to initialize GitHub authentication", "error", "Error [AUTH_INIT_ERROR]");
                         }
                     }
                 } finally {
@@ -139,7 +139,7 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
     const handleLoad = useCallback(async () => {
         try {
             if (!("showOpenFilePicker" in window)) {
-                alert("Your browser does not support file system access. Please use Chrome or Edge.");
+                showNotification("Your browser does not support file system access. Please use Chrome or Edge.", "warning");
                 if (fileInputRef.current) {
                     fileInputRef.current.click();
                 }
@@ -253,7 +253,7 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
 
         const result = validateStrictDiagramModel(modelToExecute);
         if (!result.valid) {
-            alert("Validation failed:\n" + result.errors.join("\n"));
+            showNotification("Validation failed:\n" + result.errors.join("\n"), "error", "Validation Error");
             return;
         }
 
@@ -293,9 +293,7 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
             const errorMsg = error.success === false
                 ? ApiErrorHandler.formatErrorMessage(error)
                 : error.message || "Failed to fetch branches";
-            setErrorCode(error.error_code || "BRANCHES_FETCH_ERROR");
-            setErrorMessage(errorMsg);
-            setShowErrorAlert(true);
+            showNotification(errorMsg, "error", `Error [${error.error_code || "BRANCHES_FETCH_ERROR"}]`);
         } finally {
             setIsLoadingGithub(false);
             setGithubLoadingMessage("");
@@ -319,9 +317,7 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
             const errorMsg = error.success === false
                 ? ApiErrorHandler.formatErrorMessage(error)
                 : error.message || "Failed to fetch files";
-            setErrorCode(error.error_code || "FILES_FETCH_ERROR");
-            setErrorMessage(errorMsg);
-            setShowErrorAlert(true);
+            showNotification(errorMsg, "error", `Error [${error.error_code || "FILES_FETCH_ERROR"}]`);
         } finally {
             setIsLoadingGithub(false);
             setGithubLoadingMessage("");
@@ -330,9 +326,11 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
 
     const handleExecuteConfirm = useCallback(async () => {
         if (saveDest.includes("github") && !githubOverwriteConfirmed) {
-            setErrorCode("GITHUB_OVERWRITE_CONFIRMATION_REQUIRED");
-            setErrorMessage("Please confirm that existing files can be overwritten before creating a GitHub pull request.");
-            setShowErrorAlert(true);
+            showNotification(
+                "Please confirm that existing files can be overwritten before creating a GitHub pull request.",
+                "warning",
+                "Confirmation Required"
+            );
             return;
         }
 
@@ -362,9 +360,11 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
             const result = await apiClient.executeThreatModel(saveConfig);
 
             if (result.success === false && result.error) {
-                setErrorCode(result.error_code || "EXECUTION_ERROR");
-                setErrorMessage(ApiErrorHandler.formatErrorMessage(result));
-                setShowErrorAlert(true);
+                showNotification(
+                    ApiErrorHandler.formatErrorMessage(result),
+                    "error",
+                    `Error [${result.error_code || "EXECUTION_ERROR"}]`
+                );
             }
 
             setExecutionResults(result);
@@ -376,9 +376,7 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
                 ? ApiErrorHandler.formatErrorMessage(error)
                 : error.message || "An unexpected error occurred during execution";
 
-            setErrorCode(error.error_code || "EXECUTION_ERROR");
-            setErrorMessage(errorMsg);
-            setShowErrorAlert(true);
+            showNotification(errorMsg, "error", `Error [${error.error_code || "EXECUTION_ERROR"}]`);
 
             setExecutionResults({
                 success: false,
@@ -415,7 +413,7 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
                 const result = validateDiagramFile(json);
                 if (!result.valid) {
                     console.error("Invalid diagram file:", result.errors);
-                    alert("Invalid file:\n" + result.errors.join("\n"));
+                    showNotification("Invalid file:\n" + result.errors.join("\n"), "error", "Invalid File");
                     return;
                 }
 
@@ -428,7 +426,7 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
                 deleteAllFields({ riskTrackingProvider, individualRiskCategoriesProvider, sharedRuntimesProvider, dataAssetProvider, risksIdentifiedProvider });
                 deserializeGraph(graph, json as DiagramFile, setCommonInformation, setCommonDiagram, { riskTrackingProvider, individualRiskCategoriesProvider, sharedRuntimesProvider, dataAssetProvider, risksIdentifiedProvider });
             } catch (err) {
-                alert("Error loading diagram file: " + (err as Error).message);
+                showNotification("Error loading diagram file: " + (err as Error).message, "error");
             }
         };
         reader.readAsText(file);
@@ -490,21 +488,6 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
                 githubLoadingMessage={githubLoadingMessage}
                 isExecuting={isExecuting}
             />
-
-            {showErrorAlert && (
-                <Alert
-                    severity="error"
-                    onClose={() => setShowErrorAlert(false)}
-                    sx={{ mt: 2, mb: 2 }}
-                >
-                    <AlertTitle>
-                        {errorCode ? `Error [${errorCode}]` : "Error"}
-                    </AlertTitle>
-                    <Box sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                        {errorMessage}
-                    </Box>
-                </Alert>
-            )}
 
             <ResultsDialog
                 open={showResultsDialog}
