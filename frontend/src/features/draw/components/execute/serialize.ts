@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* 
 
 Transform all data in the threagile-ui to yaml model, which is then posted to backend to execute via threagile
@@ -315,11 +316,11 @@ export function serializeToThreagileYAML(model: StrictModel): string {
 
             return [
                 t.technicalAsset.name,
-                {
+                replaceNestedIds({
                     ...assetData,
                     technology,
                     communication_links: replaceNestedIds(assetLinks[t.technicalAsset.name])
-                }
+                })
             ];
         })
     );

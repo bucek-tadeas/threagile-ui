@@ -21,7 +21,7 @@ class TestExecuteThreatModelEndpoint:
                 "destination": []
             }
         )
-        
+
         assert response.status_code == 400
         data = response.json()
         assert data["success"] is False
@@ -36,7 +36,7 @@ class TestExecuteThreatModelEndpoint:
                 "yaml_model": ""
             }
         )
-        
+
         assert response.status_code == 400
         data = response.json()
         assert data["success"] is False
@@ -57,7 +57,7 @@ class TestExecuteThreatModelEndpoint:
                     "final_local_path": "/tmp/test/test.yaml"
                 }
             )
-        
+
         assert response.status_code == 400
         data = response.json()
         assert data["success"] is False
@@ -74,7 +74,7 @@ class TestExecuteThreatModelEndpoint:
         }):
             import app.config
             app.config._config = None
-            
+
             response = test_client.post(
                 "/execute-threat-model",
                 json={
@@ -84,7 +84,6 @@ class TestExecuteThreatModelEndpoint:
                     "final_local_path": "/tmp/test/test.yaml"
                 }
             )
-            
 
             assert response.status_code in [200, 400]
 
@@ -92,7 +91,7 @@ class TestExecuteThreatModelEndpoint:
         self, test_client, sample_valid_yaml, mock_docker, tmp_threagile_dir, tmp_allowed_path
     ):
         test_file = tmp_allowed_path / "test.yaml"
-        
+
         with patch.dict(os.environ, {
             "THREAGILE_DIRECTORY": str(tmp_threagile_dir),
             "USING_LOCAL_STORAGE": "true",
@@ -101,7 +100,7 @@ class TestExecuteThreatModelEndpoint:
         }):
             import app.config
             app.config._config = None
-            
+
             response = test_client.post(
                 "/execute-threat-model",
                 json={
@@ -111,10 +110,10 @@ class TestExecuteThreatModelEndpoint:
                     "final_local_path": str(test_file)
                 }
             )
-            
+
             assert response.status_code == 200
-            data = response.json()
-            
+            response.json()
+
             assert mock_docker.called
 
     def test_execute_local_disabled_returns_error(self, test_client, sample_valid_yaml, tmp_threagile_dir):
@@ -136,7 +135,7 @@ class TestExecuteThreatModelEndpoint:
                     "final_local_path": "/tmp/test/test.yaml"
                 }
             )
-            
+
             assert response.status_code == 200
             data = response.json()
             if "execution_results" in data:
@@ -167,10 +166,10 @@ class TestExecuteThreatModelEndpoint:
         )
 
         fastapi_app.dependency_overrides[router_module.get_api_client] = lambda: mock_api_client
-        router_module.sessions["test-session"] = {
+        router_module.sessions.set("test-session", {
             "access_token": "token123",
             "expires_at": None,
-        }
+        })
 
         try:
             with patch.dict(os.environ, {
@@ -208,7 +207,7 @@ class TestExecuteThreatModelEndpoint:
         finally:
             test_client.cookies.clear()
             fastapi_app.dependency_overrides.clear()
-            router_module.sessions.pop("test-session", None)
+            router_module.sessions.delete("test-session")
 
     def test_execute_github_overwrite_requires_confirmation(
         self,
@@ -230,10 +229,10 @@ class TestExecuteThreatModelEndpoint:
         )
 
         fastapi_app.dependency_overrides[router_module.get_api_client] = lambda: mock_api_client
-        router_module.sessions["test-session"] = {
+        router_module.sessions.set("test-session", {
             "access_token": "token123",
             "expires_at": None,
-        }
+        })
 
         try:
             with patch.dict(os.environ, {
@@ -271,7 +270,7 @@ class TestExecuteThreatModelEndpoint:
         finally:
             test_client.cookies.clear()
             fastapi_app.dependency_overrides.clear()
-            router_module.sessions.pop("test-session", None)
+            router_module.sessions.delete("test-session")
 
 
 @pytest.mark.integration
@@ -290,5 +289,5 @@ class TestExecutionErrorHandling:
             content="not json",
             headers={"Content-Type": "application/json"}
         )
-        
+
         assert response.status_code == 422

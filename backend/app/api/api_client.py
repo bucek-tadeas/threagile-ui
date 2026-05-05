@@ -1,3 +1,16 @@
+"""
+GitHub API client for OAuth authentication, repository browsing, and pull request workflows.
+
+Handles the full GitHub integration lifecycle:
+  - OAuth token exchange and user info retrieval
+  - Repository listing, branch listing, and recursive directory walking
+  - Branch creation, file upload (create/update), and pull request creation
+  - Orchestration of the full "execute and publish artifacts as PR" workflow
+
+All HTTP interactions use httpx with timeouts and raise typed exceptions
+(GitHubException, AuthenticationException, ValidationException) on failure.
+"""
+
 import os
 import base64
 import posixpath
@@ -15,7 +28,7 @@ load_dotenv()
 class APIClient:
     def __init__(self):
         config = get_config()
-        
+
         self.client_id = config.github_client_id
         self.client_secret = config.github_client_secret
         self.redirect_uri = config.github_redirect_uri
@@ -74,15 +87,19 @@ class APIClient:
                 response.raise_for_status()
                 token_data = response.json()
                 access_token = token_data.get("access_token", "")
-                
+
                 if not access_token:
                     error_msg = token_data.get("error_description", "Unknown error")
-                    log_error("WARNING", f"Failed to get access token from GitHub: {error_msg}", error_code="GITHUB_TOKEN_FAILED")
+                    log_error(
+                        "WARNING",
+                        f"Failed to get access token from GitHub: {error_msg}",
+                        error_code="GITHUB_TOKEN_FAILED",
+                    )
                     raise GitHubException(
                         f"Failed to obtain access token: {error_msg}",
                         details={"github_error": token_data.get("error")}
                     )
-                
+
                 return access_token
         except httpx.HTTPError as e:
             log_error("ERROR", "GitHub OAuth token exchange failed", error_code="GITHUB_API_ERROR", exception=e)
@@ -90,7 +107,7 @@ class APIClient:
                 f"GitHub authentication failed: {str(e)}",
                 details={"http_error": str(e)}
             )
-        
+
     async def get_user_info(self, access_token: str) -> dict:
         try:
             async with httpx.AsyncClient() as client:
@@ -108,7 +125,10 @@ class APIClient:
                     "Invalid or expired GitHub token",
                     details={"status_code": e.response.status_code}
                 )
-            log_error("ERROR", "Failed to fetch user info from GitHub", error_code="GITHUB_USER_INFO_ERROR", exception=e)
+            log_error(
+                "ERROR", "Failed to fetch user info from GitHub",
+                error_code="GITHUB_USER_INFO_ERROR", exception=e,
+            )
             raise GitHubException(
                 f"Failed to fetch user information: {str(e)}",
                 details={"status_code": e.response.status_code}
@@ -119,7 +139,7 @@ class APIClient:
                 f"GitHub API error: {str(e)}",
                 details={"http_error": str(e)}
             )
-        
+
     async def get_github_repos(self, access_token: str) -> list:
         try:
             repos = []
@@ -166,7 +186,7 @@ class APIClient:
                 f"GitHub API error: {str(e)}",
                 details={"http_error": str(e)}
             )
-        
+
     async def get_github_branches(self, repo: str, access_token: str) -> list:
         try:
             async with httpx.AsyncClient() as client:
@@ -193,7 +213,10 @@ class APIClient:
                     f"Repository not found: {repo}",
                     details={"status_code": 404, "repo": repo}
                 )
-            log_error("ERROR", f"Failed to fetch branches for repo {repo}", error_code="GITHUB_BRANCHES_ERROR", exception=e)
+            log_error(
+                "ERROR", f"Failed to fetch branches for repo {repo}",
+                error_code="GITHUB_BRANCHES_ERROR", exception=e,
+            )
             raise GitHubException(
                 f"Failed to fetch branches: {str(e)}",
                 details={"status_code": e.response.status_code, "repo": repo}
@@ -204,10 +227,8 @@ class APIClient:
                 f"GitHub API error: {str(e)}",
                 details={"http_error": str(e), "repo": repo}
             )
-        
-    
+
     async def walk_github_directory(self, repo: str, branch: str, access_token: str, path: str, paths):
-        """Recursively walk GitHub directory structure"""
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
@@ -237,7 +258,10 @@ class APIClient:
                     f"Path not found in repository: {path}",
                     details={"status_code": 404, "repo": repo, "path": path}
                 )
-            log_error("ERROR", f"Failed to walk directory {path} in repo {repo}", error_code="GITHUB_WALK_DIR_ERROR", exception=e)
+            log_error(
+                "ERROR", f"Failed to walk directory {path} in repo {repo}",
+                error_code="GITHUB_WALK_DIR_ERROR", exception=e,
+            )
             raise GitHubException(
                 f"Failed to fetch directory contents: {str(e)}",
                 details={"status_code": e.response.status_code, "path": path}
@@ -288,13 +312,13 @@ class APIClient:
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 422:
                 raise GitHubException(
-                    "Failed to create source branch; branch may already exist",
+                    "Branch already exists or could not be created",
                     details={"repo": repo, "source_branch": source_branch},
                 )
             if e.response.status_code == 401:
                 raise AuthenticationException("Invalid or expired GitHub token")
             raise GitHubException(
-                "Failed to create source branch",
+                "Failed to create branch on GitHub",
                 details={"repo": repo, "source_branch": source_branch, "status_code": e.response.status_code},
             )
 
@@ -358,7 +382,7 @@ class APIClient:
             if e.response.status_code == 401:
                 raise AuthenticationException("Invalid or expired GitHub token")
             raise GitHubException(
-                "Failed to upload file to GitHub",
+                "Failed to commit file to GitHub",
                 details={"repo": repo, "branch": branch, "path": file_path, "status_code": e.response.status_code},
             )
 
@@ -403,8 +427,11 @@ class APIClient:
             if e.response.status_code == 401:
                 raise AuthenticationException("Invalid or expired GitHub token")
             raise GitHubException(
-                "Failed to create pull request",
-                details={"repo": repo, "head": source_branch, "base": target_branch, "status_code": e.response.status_code},
+                "Failed to create pull request on GitHub",
+                details={
+                    "repo": repo, "head": source_branch,
+                    "base": target_branch, "status_code": e.response.status_code,
+                },
             )
 
     async def publish_execution_artifacts_as_pr(
@@ -427,7 +454,10 @@ class APIClient:
 
         for relative_path, content in artifacts:
             normalized_relative = self._normalize_repo_path(relative_path)
-            remote_path = posixpath.join(normalized_base, normalized_relative) if normalized_base else normalized_relative
+            remote_path = (
+                posixpath.join(normalized_base, normalized_relative)
+                if normalized_base else normalized_relative
+            )
             remote_path = self._normalize_repo_path(remote_path)
             if not remote_path:
                 continue

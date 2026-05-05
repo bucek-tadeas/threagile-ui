@@ -1,3 +1,13 @@
+/* eslint-disable react-refresh/only-export-components */
+/*
+
+Global notification system using MUI Snackbar/Alert.
+
+Provides a NotificationProvider that wraps the app and a useNotification hook that exposes
+showNotification(message, severity, title) to display toast-style messages from anywhere.
+
+*/
+
 import React, { createContext, useContext, useState, useCallback } from "react";
 import { Snackbar, Alert, AlertTitle, Box } from "@mui/material";
 

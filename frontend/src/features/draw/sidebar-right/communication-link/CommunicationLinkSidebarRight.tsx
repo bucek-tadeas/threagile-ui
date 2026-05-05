@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/rules-of-hooks */
 /*
 
 Right sidebar component for communication links

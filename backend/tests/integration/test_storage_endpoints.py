@@ -26,27 +26,39 @@ class TestExecutionMethodsEndpoint:
         }):
             import app.config
             app.config._config = None
-            
-            response = test_client.get("/execution-methods")
-            
+            new_config = app.config.get_config()
+
+            with patch("app.api.router.config", new_config):
+                response = test_client.get("/execution-methods")
+
             assert response.status_code == 200
             data = response.json()
             assert "methods" in data
             methods = data["methods"]
-            assert "local" in methods
-            assert "server" in methods or "github" in methods
+            assert "server" in methods
+            assert "github" in methods
 
-    def test_get_execution_methods_local_only(self, test_client):
-        response = test_client.get("/execution-methods")
-        
-        assert response.status_code == 200
-        data = response.json()
-        assert "methods" in data
-        assert "local" in data["methods"]
+    def test_get_execution_methods_none_when_disabled(self, test_client):
+        with patch.dict(os.environ, {
+            "USING_LOCAL_STORAGE": "false",
+            "USING_GITHUB": "false",
+            "THREAGILE_DIRECTORY": "/tmp/threagile",
+        }):
+            import app.config
+            app.config._config = None
+            new_config = app.config.get_config()
+
+            with patch("app.api.router.config", new_config):
+                response = test_client.get("/execution-methods")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert "methods" in data
+            assert data["methods"] == []
 
     def test_execution_methods_returns_json(self, test_client):
         response = test_client.get("/execution-methods")
-        
+
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, dict)
@@ -64,9 +76,9 @@ class TestLocalPathsEndpoint:
         }):
             import app.config
             app.config._config = None
-            
+
             response = test_client.get("/local-paths")
-            
+
             assert response.status_code == 200
             data = response.json()
             assert "paths" in data
@@ -82,7 +94,7 @@ class TestLocalPathsEndpoint:
             app.config._config = None
 
             response = test_client.get("/local-paths")
-            
+
             assert response.status_code == 200
             data = response.json()
             assert data["paths"] == []
@@ -93,14 +105,14 @@ class TestLocalPathsEndpoint:
 class TestLogoutEndpoint:
     def test_logout_success(self, test_client):
         response = test_client.post("/logout")
-        
+
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
 
     def test_logout_without_session(self, test_client):
         response = test_client.post("/logout")
-        
+
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
@@ -113,7 +125,7 @@ class TestCORSConfiguration:
             "/execution-methods",
             headers={"Origin": "http://localhost:5173"}
         )
-        
+
         assert response.status_code == 200
         assert "access-control-allow-origin" in response.headers or response.status_code == 200
 
@@ -125,5 +137,5 @@ class TestCORSConfiguration:
                 "Access-Control-Request-Method": "GET",
             }
         )
-        
+
         assert response.status_code in [200, 204]

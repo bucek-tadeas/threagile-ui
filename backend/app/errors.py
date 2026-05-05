@@ -1,4 +1,14 @@
 
+"""
+Error handling infrastructure for the backend API.
+
+Defines a hierarchy of exception classes (ValidationException, FileException, GitHubException,
+AuthenticationException, ConfigurationException, DockerException) that all inherit from APIException.
+Each exception carries an error code, HTTP status, and optional details dict, and can serialize
+itself to a consistent JSON error response.
+
+Also provides a structured logger (log_error) used throughout the application.
+"""
 
 import logging
 from enum import Enum
@@ -125,10 +135,10 @@ def log_error(
     **context
 ) -> None:
     log_func = getattr(logger, level.lower(), logger.error)
-    
+
     context_str = " | ".join(f"{k}={v}" for k, v in context.items())
     error_code_str = f"[{error_code}] " if error_code else ""
-    
+
     if exception:
         log_func(f"{error_code_str}{message} | {str(exception)} | {context_str}")
     else:

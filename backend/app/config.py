@@ -11,19 +11,31 @@ from app.errors import ConfigurationException, log_error
 load_dotenv()
 
 
-class Config:    
+class Config:
     def __init__(self):
+        self.host = os.getenv("HOST", "0.0.0.0")
+        self.port = int(os.getenv("PORT", "8000"))
+        self.cors_origins = [
+            origin.strip()
+            for origin in os.getenv("CORS_ORIGINS", "http://127.0.0.1:5173,http://localhost:5173").split(",")
+            if origin.strip()
+        ]
+
+        self.frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
         self.using_local_storage = os.getenv("USING_LOCAL_STORAGE", "true").lower() == "true"
         self.using_github = os.getenv("USING_GITHUB", "true").lower() == "true"
-        
+
         self.session_ttl_seconds = int(os.getenv("SESSION_TTL_SECONDS", "43200"))
+        self.session_store = os.getenv("SESSION_STORE", "memory").lower()
+        self.session_file_path = os.getenv("SESSION_FILE_PATH", "sessions.json")
         self.cookie_secure = os.getenv("COOKIE_SECURE", "false").lower() == "true"
         self.cookie_samesite = os.getenv("COOKIE_SAMESITE", "lax").lower()
         if self.cookie_samesite not in ("lax", "strict", "none"):
             self.cookie_samesite = "lax"
-        
+
         self.threagile_directory = os.getenv("THREAGILE_DIRECTORY")
-        
+
         self.store_local_enabled = os.getenv("STORE_LOCAL_ENABLED", "true").lower() == "true"
         self.store_github_enabled = os.getenv("STORE_GITHUB_ENABLED", "true").lower() == "true"
 
@@ -38,7 +50,7 @@ class Config:
             "Automated threat model execution artifacts for {model_name}.\n\nGenerated at {timestamp} UTC.",
         )
         self.github_result_default_file = os.getenv("GITHUB_RESULT_DEFAULT_FILE", ".threatmodel/threatmodel.yaml")
-        
+
         if self.using_github:
             self.github_client_id = os.getenv("GITHUB_CLIENT_ID")
             self.github_client_secret = os.getenv("GITHUB_CLIENT_SECRET")
@@ -49,20 +61,20 @@ class Config:
             self.github_client_secret = None
             self.github_redirect_uri = None
             self.github_org_uri = None
-        
+
         if self.using_local_storage:
             self.allowed_paths = os.getenv("ALLOWED_PATHS")
         else:
             self.allowed_paths = None
-        
+
         self._validate()
-    
+
     def _validate(self):
         missing_vars = []
-        
+
         if not self.threagile_directory:
             missing_vars.append("THREAGILE_DIRECTORY")
-        
+
         if self.using_github:
             github_vars = {
                 "GITHUB_CLIENT_ID": self.github_client_id,
@@ -73,27 +85,27 @@ class Config:
             for var_name, var_value in github_vars.items():
                 if not var_value:
                     missing_vars.append(var_name)
-        
+
         if self.using_local_storage:
             if not self.allowed_paths:
                 missing_vars.append("ALLOWED_PATHS")
-        
+
         if missing_vars:
             log_error("ERROR", "Missing required environment variables", missing_vars=missing_vars)
             raise ConfigurationException(
                 f"Missing required configuration: {', '.join(missing_vars)}",
                 details={"missing_variables": missing_vars}
             )
-    
+
     def get_available_methods(self) -> list[str]:
-        methods = ["local"]
-        
+        methods = []
+
         if self.using_local_storage and self.store_local_enabled:
             methods.append("server")
-        
+
         if self.using_github and self.store_github_enabled:
             methods.append("github")
-        
+
         return methods
 
 

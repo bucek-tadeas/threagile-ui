@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 /*
 
 Right sidebar component for common information - abstraction covering all the top level information

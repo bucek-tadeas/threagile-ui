@@ -1,3 +1,10 @@
+/*
+
+Execution dialog UI - lets the user choose execution destinations (local download, server, GitHub),
+configure paths/repos/branches, and trigger threat model execution against the backend.
+
+*/
+
 import React from "react";
 import {
     Box, Button, Dialog, DialogTitle, DialogContent, DialogActions,
@@ -9,9 +16,9 @@ export interface ExecuteDialogProps {
     open: boolean;
     onClose: () => void;
     onConfirm: () => void;
-    availableMethods: ("local" | "server" | "github")[];
-    saveDest: ("local" | "server" | "github")[];
-    toggleDest: (val: "local" | "server" | "github") => void;
+    availableMethods: ("server" | "github")[];
+    saveDest: ("server" | "github")[];
+    toggleDest: (val: "server" | "github") => void;
     modelName: string;
     setModelName: (v: string) => void;
     localBasePaths: string[];
@@ -50,29 +57,6 @@ export const ExecuteDialog: React.FC<ExecuteDialogProps> = ({
         <DialogTitle>Select execution save options</DialogTitle>
 
         <DialogContent dividers>
-            {availableMethods.includes("local") && (
-                <Box>
-                    <FormControlLabel
-                        control={
-                            <Checkbox
-                                checked={saveDest.includes("local")}
-                                onChange={() => toggleDest("local")}
-                            />
-                        }
-                        label="Save as file locally (browser download)"
-                    />
-                    {saveDest.includes("local") && (
-                        <TextField
-                            fullWidth
-                            margin="normal"
-                            label="Local file name"
-                            value={modelName}
-                            onChange={(e) => setModelName(e.target.value)}
-                        />
-                    )}
-                </Box>
-            )}
-
             {availableMethods.includes("server") && (
                 <Box>
                     <FormControlLabel

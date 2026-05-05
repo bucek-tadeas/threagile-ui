@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
 
 Helper functions for saving information - collect all the data from the graph

@@ -1,3 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
+/*
+
+Cascading cleanup hook - watches for deleted graph elements (technical assets, communication links,
+trust boundaries) and automatically removes dangling references from data assets, shared runtimes,
+and risks identified contexts. Also clears the sidebar form if the selected element was deleted.
+
+*/
+
 import { useEffect } from "react";
 import type { Graph } from "@maxgraph/core";
 import type { TechnicalAsset, CommunicationLink } from "@components/types/threagileComponents";

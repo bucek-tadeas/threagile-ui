@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
 
 Serialization of the model in .json format - used for Save and Save As

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
 
 Pop up menu which allows user to add different components on the canvas

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
 
 Deserialization of json file in the UI - used for load
@@ -16,6 +17,57 @@ import { TrustBoundaryVertex } from "@components/VertexAndEdgeInsert";
 import { technicalAssetStyles } from "@components/styles/assetVertexStyles";
 import type React from "react";
 import { useDataAssets, useIndividualRiskCategories, useRisksIdentified, useRiskTracking, useSharedRuntimes } from "@context/ThreatModelContext";
+
+function computeAutoLayout(
+    trustBoundaries: DiagramTrustBoundary[],
+    technicalAssets: DiagramTechnicalAsset[]
+): Record<string, { x: number; y: number }> {
+    const positions: Record<string, { x: number; y: number }> = {};
+    const ASSET_WIDTH = 140;
+    const ASSET_HEIGHT = 80;
+    const TB_WIDTH = 300;
+    const TB_HEIGHT = 200;
+    const GAP_X = 60;
+    const GAP_Y = 60;
+    const COLS = Math.max(3, Math.ceil(Math.sqrt(trustBoundaries.length + technicalAssets.length)));
+
+    let index = 0;
+
+    trustBoundaries.forEach((tb) => {
+        const col = index % COLS;
+        const row = Math.floor(index / COLS);
+        positions[tb.internalId] = {
+            x: col * (TB_WIDTH + GAP_X) + GAP_X,
+            y: row * (TB_HEIGHT + GAP_Y) + GAP_Y,
+        };
+        index++;
+    });
+
+    const orphanAssets = technicalAssets.filter(ta => !ta.parentId);
+    orphanAssets.forEach((ta) => {
+        const col = index % COLS;
+        const row = Math.floor(index / COLS);
+        positions[ta.internalId] = {
+            x: col * (ASSET_WIDTH + GAP_X) + GAP_X,
+            y: row * (ASSET_HEIGHT + GAP_Y) + GAP_Y,
+        };
+        index++;
+    });
+
+    trustBoundaries.forEach((tb) => {
+        const children = technicalAssets.filter(ta => ta.parentId === tb.internalId);
+        children.forEach((ta, childIdx) => {
+            const childCol = childIdx % 2;
+            const childRow = Math.floor(childIdx / 2);
+            positions[ta.internalId] = {
+                x: childCol * (ASSET_WIDTH + 20) + 20,
+                y: childRow * (ASSET_HEIGHT + 20) + 40,
+            };
+        });
+    });
+
+    return positions;
+}
 
 export type DeserializeProviders = {
     riskTrackingProvider: ReturnType<typeof useRiskTracking>,
@@ -40,6 +92,11 @@ export function deserializeGraph(
     const parent = graph.getDefaultParent();
     const cellMap: Record<string, Cell> = {};
 
+    const hasPositions = json.ui?.positions && Object.keys(json.ui.positions).length > 0;
+    const positions = hasPositions
+        ? json.ui!.positions
+        : computeAutoLayout(json.trust_boundaries || [], json.technical_assets || []);
+
     graph.model.beginUpdate();
     try {
         const dataAssets: DataAsset[] = json.data_assets || [];
@@ -50,7 +107,8 @@ export function deserializeGraph(
 
         const trustBoundaries = json.trust_boundaries || [];
         trustBoundaries.forEach((tb: DiagramTrustBoundary) => {
-            const vertex = TrustBoundaryVertex(graph, json.ui?.positions[tb.internalId].x, json.ui?.positions[tb.internalId].y, 300, 200, tb.trustBoundary.name);
+            const pos = positions[tb.internalId];
+            const vertex = TrustBoundaryVertex(graph, pos?.x ?? 0, pos?.y ?? 0, 300, 200, tb.trustBoundary.name);
 
             (vertex as any).trustBoundary = tb.trustBoundary;
             cellMap[tb.internalId] = vertex;
@@ -59,12 +117,13 @@ export function deserializeGraph(
         const technicalAssets = json.technical_assets || [];
         technicalAssets.forEach((ta: DiagramTechnicalAsset) => {
             const parentCell = ta.parentId ? cellMap[ta.parentId] : parent;
+            const pos = positions[ta.internalId];
             const vertex = graph.insertVertex(
                 parentCell,
                 null,
                 ta.technicalAsset.name,
-                json.ui?.positions[ta.internalId].x || 0,
-                json.ui?.positions[ta.internalId].y || 0,
+                pos?.x ?? 0,
+                pos?.y ?? 0,
                 140,
                 80,
                 ta.technicalAsset.type ? technicalAssetStyles[ta.technicalAsset.type] : undefined,

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
 /*
 
 Handle files. Options to load files and direct access to the filesystem or optional fallback if the browser doesn't support this functionality.
@@ -9,6 +10,7 @@ import React, { useRef, useCallback, useState, useEffect } from "react";
 import { serializeGraph } from "./utils/serialize";
 import { deserializeGraph } from "./utils/deserialize";
 import { validateDiagramFile } from "./utils/validation";
+import { isNativeThreagileModel, convertNativeThreagileToDigramFile } from "./utils/threagileModelConverter";
 import { Box, Grid, Button } from "@mui/material";
 import yaml from "js-yaml";
 import type { CommonInformation, CommonDiagram } from "@components/types/threagileComponents";
@@ -49,6 +51,7 @@ function deleteAllFields(providers: {
 
 export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformation, setCommonInformation, common_diagram, setCommonDiagram }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const yamlFileInputRef = useRef<HTMLInputElement>(null);
     const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null);
     const { showNotification } = useNotification();
 
@@ -59,8 +62,8 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
     const risksIdentifiedProvider = useRisksIdentified();
 
     const [showExecuteDialog, setShowExecuteDialog] = useState(false);
-    const [saveDest, setSaveDest] = useState<("local" | "server" | "github")[]>([]);
-    const [availableMethods, setAvailableMethods] = useState<("local" | "server" | "github")[]>(["local", "server", "github"]);
+    const [saveDest, setSaveDest] = useState<("server" | "github")[]>([]);
+    const [availableMethods, setAvailableMethods] = useState<("server" | "github")[]>(["server", "github"]);
     const [localPath, setLocalPath] = useState("");
     const [githubRepo, setGithubRepo] = useState("");
     const [githubBranch, setGithubBranch] = useState("");
@@ -85,7 +88,7 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
             (async () => {
                 try {
                     const { methods } = await apiClient.getExecutionMethods();
-                    setAvailableMethods(methods as ("local" | "server" | "github")[]);
+                    setAvailableMethods(methods as ("server" | "github")[]);
 
                     if (methods.includes("server")) {
                         const { paths } = await apiClient.getLocalPaths();
@@ -96,7 +99,7 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
                     }
                 } catch (error: any) {
                     console.error("Failed to fetch execution methods:", error);
-                    setAvailableMethods(["local", "server", "github"]);
+                    setAvailableMethods(["server", "github"]);
                 }
             })();
         }
@@ -124,7 +127,7 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
                         try {
                             const { url } = await apiClient.getGithubAuthUrl();
                             window.location.href = url;
-                        } catch (authError) {
+                        } catch {
                             showNotification("Failed to initialize GitHub authentication", "error", "Error [AUTH_INIT_ERROR]");
                         }
                     }
@@ -149,17 +152,19 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
             const [handle] = await (window as any).showOpenFilePicker({
                 types: [
                     {
-                        description: "Threagile Diagram Files",
-                        accept: { "application/json": [".json", ".yaml", ".yml"] },
+                        description: "Threagile Diagram Files (JSON)",
+                        accept: {
+                            "application/json": [".json"],
+                        },
                     },
                 ],
-                excludeAcceptAllOption: true,
+                excludeAcceptAllOption: false,
                 multiple: false,
             });
 
             const file = await handle.getFile();
             const text = await file.text();
-            const data = text.trim().startsWith("{") ? JSON.parse(text) : yaml.load(text);
+            const data = JSON.parse(text);
 
             graph.model.beginUpdate();
             try {
@@ -172,6 +177,50 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
             deserializeGraph(graph, data, setCommonInformation, setCommonDiagram, { riskTrackingProvider, individualRiskCategoriesProvider, sharedRuntimesProvider, dataAssetProvider, risksIdentifiedProvider });
         } catch (err) {
             console.error("File open cancelled or failed:", err);
+        }
+    }, [graph, setCommonInformation, setCommonDiagram, riskTrackingProvider, individualRiskCategoriesProvider, sharedRuntimesProvider, dataAssetProvider, risksIdentifiedProvider]);
+
+    const handleImportYaml = useCallback(async () => {
+        try {
+            if (!("showOpenFilePicker" in window)) {
+                showNotification("Your browser does not support file system access. Please use Chrome or Edge.", "warning");
+                if (yamlFileInputRef.current) {
+                    yamlFileInputRef.current.click();
+                }
+                return;
+            }
+
+            const [handle] = await (window as any).showOpenFilePicker({
+                types: [
+                    {
+                        description: "Threagile YAML Model",
+                        accept: {
+                            "application/x-yaml": [".yaml", ".yml"],
+                        },
+                    },
+                ],
+                excludeAcceptAllOption: false,
+                multiple: false,
+            });
+
+            const file = await handle.getFile();
+            const text = await file.text();
+            let data = yaml.load(text) as object;
+
+            if (isNativeThreagileModel(data)) {
+                data = convertNativeThreagileToDigramFile(data);
+            }
+
+            graph.model.beginUpdate();
+            try {
+                graph.model.clear();
+            } finally {
+                graph.model.endUpdate();
+            }
+            deleteAllFields({ riskTrackingProvider, individualRiskCategoriesProvider, sharedRuntimesProvider, dataAssetProvider, risksIdentifiedProvider });
+            deserializeGraph(graph, data as DiagramFile, setCommonInformation, setCommonDiagram, { riskTrackingProvider, individualRiskCategoriesProvider, sharedRuntimesProvider, dataAssetProvider, risksIdentifiedProvider });
+        } catch (err) {
+            console.error("YAML import cancelled or failed:", err);
         }
     }, [graph, setCommonInformation, setCommonDiagram, riskTrackingProvider, individualRiskCategoriesProvider, sharedRuntimesProvider, dataAssetProvider, risksIdentifiedProvider]);
 
@@ -236,6 +285,50 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
             setFileHandle(newHandle);
         } catch (err) {
             console.error("Save As failed or cancelled:", err);
+        }
+    }, [graph, commonInformation, common_diagram, riskTrackingProvider, individualRiskCategoriesProvider, sharedRuntimesProvider, dataAssetProvider, risksIdentifiedProvider]);
+
+    const handleExportYaml = useCallback(async () => {
+        const modelToExport: StrictModel = {
+            graph,
+            commonInformation,
+            common_diagram,
+            riskTracking: riskTrackingProvider.elements,
+            individualRiskCategories: individualRiskCategoriesProvider.elements,
+            sharedRuntimes: sharedRuntimesProvider.elements,
+            dataAssets: dataAssetProvider.elements,
+            risksIdentified: risksIdentifiedProvider.elements,
+        };
+
+        const yamlContent = serializeToThreagileYAML(modelToExport);
+
+        try {
+            if (!("showSaveFilePicker" in window)) {
+                const blob = new Blob([yamlContent], { type: "application/x-yaml" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "threatmodel.yaml";
+                a.click();
+                URL.revokeObjectURL(url);
+                return;
+            }
+
+            const handle = await (window as any).showSaveFilePicker({
+                suggestedName: "threatmodel.yaml",
+                types: [
+                    {
+                        description: "Threagile YAML Model",
+                        accept: { "application/x-yaml": [".yaml", ".yml"] },
+                    },
+                ],
+            });
+
+            const writable = await handle.createWritable();
+            await writable.write(yamlContent);
+            await writable.close();
+        } catch (err) {
+            console.error("Export YAML failed or cancelled:", err);
         }
     }, [graph, commonInformation, common_diagram, riskTrackingProvider, individualRiskCategoriesProvider, sharedRuntimesProvider, dataAssetProvider, risksIdentifiedProvider]);
 
@@ -347,16 +440,6 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
 
         setIsExecuting(true);
         try {
-            if (saveDest.includes("local")) {
-                const blob = new Blob([yamlModel], { type: "application/x-yaml" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = modelName || "threatmodel.yaml";
-                a.click();
-                URL.revokeObjectURL(url);
-            }
-
             const result = await apiClient.executeThreatModel(saveConfig);
 
             if (result.success === false && result.error) {
@@ -409,7 +492,8 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
         reader.onload = (e) => {
             try {
                 const text = e.target?.result as string;
-                const json = yaml.load(text) as object;
+                const json = JSON.parse(text);
+
                 const result = validateDiagramFile(json);
                 if (!result.valid) {
                     console.error("Invalid diagram file:", result.errors);
@@ -432,7 +516,36 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
         reader.readAsText(file);
     }, [graph]);
 
-    const toggleDest = (val: "local" | "server" | "github") => {
+    const handleYamlFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const text = e.target?.result as string;
+                let data = yaml.load(text) as object;
+
+                if (isNativeThreagileModel(data)) {
+                    data = convertNativeThreagileToDigramFile(data);
+                }
+
+                graph.model.beginUpdate();
+                try {
+                    graph.model.clear();
+                } finally {
+                    graph.model.endUpdate();
+                }
+                deleteAllFields({ riskTrackingProvider, individualRiskCategoriesProvider, sharedRuntimesProvider, dataAssetProvider, risksIdentifiedProvider });
+                deserializeGraph(graph, data as DiagramFile, setCommonInformation, setCommonDiagram, { riskTrackingProvider, individualRiskCategoriesProvider, sharedRuntimesProvider, dataAssetProvider, risksIdentifiedProvider });
+            } catch (err) {
+                showNotification("Error importing YAML file: " + (err as Error).message, "error");
+            }
+        };
+        reader.readAsText(file);
+    }, [graph]);
+
+    const toggleDest = (val: "server" | "github") => {
         setSaveDest(prev =>
             prev?.includes(val)
                 ? prev.filter(v => v !== val)
@@ -448,6 +561,8 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
                 <Grid><Button variant="contained" color="secondary" onClick={handleLoad}>Load</Button></Grid>
                 <Grid><Button variant="contained" color="secondary" onClick={handleSave}>Save</Button></Grid>
                 <Grid><Button variant="contained" color="secondary" onClick={handleSaveAs}>Save As</Button></Grid>
+                <Grid><Button variant="contained" color="primary" onClick={handleImportYaml}>Import YAML</Button></Grid>
+                <Grid><Button variant="contained" color="primary" onClick={handleExportYaml}>Export YAML</Button></Grid>
                 <Grid><Button variant="contained" color="success" onClick={handleExecute}>Execute</Button></Grid>
             </Grid>
 
@@ -455,8 +570,15 @@ export const LoadAndSave: React.FC<LoadAndSaveProps> = ({ graph, commonInformati
                 type="file"
                 ref={fileInputRef}
                 style={{ display: "none" }}
-                accept=".json,.xml"
+                accept=".json"
                 onChange={handleFileChange}
+            />
+            <input
+                type="file"
+                ref={yamlFileInputRef}
+                style={{ display: "none" }}
+                accept=".yaml,.yml"
+                onChange={handleYamlFileChange}
             />
 
             <ExecuteDialog

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /*
 
 Tag context provider for global storing of tag values

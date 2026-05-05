@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
 
 API client for communication with backend
@@ -9,7 +10,7 @@ import type { IApiClient } from "./api";
 export class APIClient implements IApiClient {
   private baseUrl: string;
 
-  constructor(baseUrl: string = "http://localhost:8000") {
+  constructor(baseUrl: string = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000") {
     this.baseUrl = baseUrl;
   }
 

@@ -1,3 +1,17 @@
+"""
+API route definitions for the backend.
+
+Endpoints are grouped into:
+  - Authentication: GitHub OAuth flow (/auth/github-url, /auth/callback, /me, /logout)
+  - Configuration: execution methods and local paths (/execution-methods, /local-paths)
+  - GitHub browsing: repos, branches, file trees (/github-repos, /github-branches, /github-files)
+  - Execution: validate YAML against schema, run threagile via Docker, optionally save to
+    local filesystem and/or publish to GitHub as a pull request (/execute-threat-model)
+
+Sessions are stored in-memory with configurable TTL. All errors are returned in a
+consistent JSON format via the APIException hierarchy.
+"""
+
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from app.api.api_client import APIClient
@@ -22,26 +36,20 @@ from app.errors import (
     log_error,
 )
 from app.config import get_config
+from app.session_store import create_session_store
 
 router = APIRouter()
 
 # Load configuration
 config = get_config()
 
-sessions = {}
+sessions = create_session_store()
 
 
 def _get_session(session_id: str | None):
     if not session_id:
         return None
-    session = sessions.get(session_id)
-    if not session:
-        return None
-    expires_at = session.get("expires_at")
-    if isinstance(expires_at, datetime) and expires_at <= datetime.now(timezone.utc):
-        sessions.pop(session_id, None)
-        return None
-    return session
+    return sessions.get(session_id)
 
 
 def _get_access_token(session_id: str | None) -> str | None:
@@ -97,25 +105,28 @@ async def github_callback(request: Request, api_client: APIClient = Depends(get_
         except APIException:
             raise
         except Exception as e:
-            log_error("ERROR", "Failed to exchange GitHub code for token", error_code="TOKEN_EXCHANGE_ERROR", exception=e)
+            log_error(
+                "ERROR", "Failed to exchange GitHub code for token",
+                error_code="TOKEN_EXCHANGE_ERROR", exception=e,
+            )
             raise AuthenticationException("Failed to obtain access token from GitHub")
 
         session_id = uuid.uuid4().hex
         expires_at = datetime.now(timezone.utc) + timedelta(seconds=config.session_ttl_seconds)
-        sessions[session_id] = {
+        sessions.set(session_id, {
             "access_token": access_token,
-            "expires_at": expires_at,
-        }
+            "expires_at": expires_at.isoformat(),
+        })
 
         try:
-            user_info = await api_client.get_user_info(access_token)
+            await api_client.get_user_info(access_token)
         except APIException:
             raise
         except Exception as e:
             log_error("ERROR", "Failed to fetch user info", error_code="USER_INFO_ERROR", exception=e)
             raise AuthenticationException("Failed to fetch user information")
 
-        response = RedirectResponse(url="http://localhost:5173/draw")
+        response = RedirectResponse(url=f"{config.frontend_url}/")
         response.set_cookie(
             key="session_id",
             value=session_id,
@@ -176,7 +187,7 @@ async def get_current_user(session_id: str = Cookie(None), api_client: APIClient
 @router.post("/logout")
 async def logout(session_id: str = Cookie(None)):
     if session_id:
-        sessions.pop(session_id, None)
+        sessions.delete(session_id)
     response = JSONResponse(content={"success": True})
     response.delete_cookie("session_id")
     return response
@@ -268,7 +279,11 @@ async def get_github_repos(api_client: APIClient = Depends(get_api_client), sess
 
 
 @router.get("/github-branches")
-async def get_github_branches(request: Request, api_client: APIClient = Depends(get_api_client), session_id: str = Cookie(None)):
+async def get_github_branches(
+    request: Request,
+    api_client: APIClient = Depends(get_api_client),
+    session_id: str = Cookie(None),
+):
     try:
         if not session_id:
             raise AuthenticationException("Not authenticated")
@@ -293,7 +308,10 @@ async def get_github_branches(request: Request, api_client: APIClient = Depends(
     except APIException as e:
         return e.to_response()
     except Exception as e:
-        log_error("ERROR", "Unexpected error in /github-branches endpoint", error_code="BRANCHES_ENDPOINT_ERROR", exception=e)
+        log_error(
+            "ERROR", "Unexpected error in /github-branches endpoint",
+            error_code="BRANCHES_ENDPOINT_ERROR", exception=e,
+        )
         return JSONResponse(
             status_code=500,
             content={
@@ -305,7 +323,11 @@ async def get_github_branches(request: Request, api_client: APIClient = Depends(
 
 
 @router.get("/github-files")
-async def get_github_files(request: Request, api_client: APIClient = Depends(get_api_client), session_id: str = Cookie(None)):
+async def get_github_files(
+    request: Request,
+    api_client: APIClient = Depends(get_api_client),
+    session_id: str = Cookie(None),
+):
     try:
         if not session_id:
             raise AuthenticationException("Not authenticated")
@@ -328,7 +350,10 @@ async def get_github_files(request: Request, api_client: APIClient = Depends(get
         except APIException:
             raise
         except Exception as e:
-            log_error("ERROR", f"Failed to walk GitHub directory {repo}/{branch}", error_code="FILES_FETCH_ERROR", exception=e)
+            log_error(
+                "ERROR", f"Failed to walk GitHub directory {repo}/{branch}",
+                error_code="FILES_FETCH_ERROR", exception=e,
+            )
             raise
 
         return {"paths": paths}
@@ -370,8 +395,14 @@ async def execute_threat_model(
             raise ValidationException("YAML model is required")
 
         try:
-            final_local_path_sanitized = secure_sanitize_filepath(save_config.final_local_path) if save_config.final_local_path else None
-            github_file_path_sanitized = secure_sanitize_filepath(save_config.github_file_path) if save_config.github_file_path else None
+            final_local_path_sanitized = (
+                secure_sanitize_filepath(save_config.final_local_path)
+                if save_config.final_local_path else None
+            )
+            github_file_path_sanitized = (
+                secure_sanitize_filepath(save_config.github_file_path)
+                if save_config.github_file_path else None
+            )
         except Exception as e:
             log_error("ERROR", "Failed to sanitize file paths", error_code="PATH_SANITIZATION_ERROR", exception=e)
             raise ValidationException(
@@ -445,6 +476,8 @@ async def execute_threat_model(
 
         if "server" in save_config.destination:
             if store_local_enabled:
+                if not final_local_path_sanitized:
+                    raise ValidationException("Local path is required for server destination")
                 try:
                     path = Path(final_local_path_sanitized)
                     path.parent.mkdir(parents=True, exist_ok=True)
@@ -456,7 +489,10 @@ async def execute_threat_model(
                     result = storeTM.store_local(threagile_directory, final_local_path_sanitized)
                     execution_results["local"] = result
                 except Exception as e:
-                    log_error("ERROR", "Failed to execute threat model locally", error_code="LOCAL_EXEC_ERROR", exception=e)
+                    log_error(
+                        "ERROR", "Failed to execute threat model locally",
+                        error_code="LOCAL_EXEC_ERROR", exception=e,
+                    )
                     execution_results["local"] = {
                         "success": False,
                         "message": f"Failed to execute locally: {str(e)}",
@@ -543,7 +579,10 @@ async def execute_threat_model(
                         "details": e.details,
                     }
                 except Exception as e:
-                    log_error("ERROR", "Failed to execute threat model from GitHub", error_code="GITHUB_EXEC_ERROR", exception=e)
+                    log_error(
+                        "ERROR", "Failed to execute threat model from GitHub",
+                        error_code="GITHUB_EXEC_ERROR", exception=e,
+                    )
                     execution_results["github"] = {
                         "success": False,
                         "message": f"Failed to execute from GitHub: {str(e)}",
@@ -558,7 +597,10 @@ async def execute_threat_model(
                     "error_code": "GITHUB_STORAGE_DISABLED",
                 }
 
-        all_successful = all(result.get("success", False) for result in execution_results.values()) if execution_results else True
+        all_successful = all(
+            result.get("success", False)
+            for result in execution_results.values()
+        ) if execution_results else True
 
         log_error(
             "INFO",
@@ -575,7 +617,10 @@ async def execute_threat_model(
     except APIException as e:
         return e.to_response()
     except Exception as e:
-        log_error("ERROR", "Unexpected error in threat model execution", error_code="EXECUTION_UNEXPECTED_ERROR", exception=e)
+        log_error(
+            "ERROR", "Unexpected error in threat model execution",
+            error_code="EXECUTION_UNEXPECTED_ERROR", exception=e,
+        )
         return JSONResponse(
             status_code=500,
             content={

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
 
 Interface for api client implementation with the following methods:
@@ -29,35 +30,35 @@ Interface for api client implementation with the following methods:
 */
 
 interface ExecutionResult {
-  success: boolean;
-  message: string;
-  return_code: number;
-  error_code?: string;
-  details?: Record<string, any>;
-  source_branch?: string;
-  target_branch?: string;
-  commit_sha?: string;
-  pull_request_url?: string;
-  pull_request_number?: number;
-  uploaded_paths?: string[];
+    success: boolean;
+    message: string;
+    return_code: number;
+    error_code?: string;
+    details?: Record<string, any>;
+    source_branch?: string;
+    target_branch?: string;
+    commit_sha?: string;
+    pull_request_url?: string;
+    pull_request_number?: number;
+    uploaded_paths?: string[];
 }
 
 interface ExecuteThreatModelResponse {
-  success: boolean;
-  execution_results: {
-    local?: ExecutionResult;
-    github?: ExecutionResult;
-  };
-  error?: string;
+    success: boolean;
+    execution_results: {
+        local?: ExecutionResult;
+        github?: ExecutionResult;
+    };
+    error?: string;
 }
 
 export interface IApiClient {
-  getGithubAuthUrl(): Promise<{ url: string }>;
-  getCurrentUser(): Promise<{ login: string }>;
-  getExecutionMethods(): Promise<{ methods: string[] }>;
-  getLocalPaths(): Promise<{ paths: string[] }>;
-  getGithubRepos(): Promise<{ repos: string[] }>;
-  getGithubBranches(repo: string): Promise<{ branches: string[] }>;
-  getGithubFiles(repo: string, branch: string): Promise<{ files: string[] }>;
-  executeThreatModel(saveConfig: any): Promise<ExecuteThreatModelResponse>;
+    getGithubAuthUrl(): Promise<{ url: string }>;
+    getCurrentUser(): Promise<{ login: string }>;
+    getExecutionMethods(): Promise<{ methods: string[] }>;
+    getLocalPaths(): Promise<{ paths: string[] }>;
+    getGithubRepos(): Promise<{ repos: string[] }>;
+    getGithubBranches(repo: string): Promise<{ branches: string[] }>;
+    getGithubFiles(repo: string, branch: string): Promise<{ files: string[] }>;
+    executeThreatModel(saveConfig: any): Promise<ExecuteThreatModelResponse>;
 }

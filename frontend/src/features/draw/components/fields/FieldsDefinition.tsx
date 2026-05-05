@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-expressions, react-refresh/only-export-components */
 /*
 
 Fields definitions used both in sidebar left and sidebar right

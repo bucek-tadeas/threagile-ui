@@ -4,7 +4,6 @@ Pytest configuration and shared fixtures.
 
 import os
 import pytest
-from pathlib import Path
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, patch
 
@@ -127,10 +126,10 @@ def mock_docker(monkeypatch):
     mock_result.returncode = 0
     mock_result.stdout = "Docker execution successful"
     mock_result.stderr = ""
-    
+
     mock_run = MagicMock(return_value=mock_result)
     monkeypatch.setattr("subprocess.run", mock_run)
-    
+
     return mock_run
 
 
@@ -145,13 +144,13 @@ def tmp_allowed_path(tmp_path):
 def tmp_threagile_dir(tmp_path):
     threagile_dir = tmp_path / "threagile"
     threagile_dir.mkdir(parents=True, exist_ok=True)
-    
+
     support_dir = threagile_dir / "support"
     support_dir.mkdir()
-    
+
     schema_file = support_dir / "schema.json"
     schema_file.write_text('{"type": "object", "properties": {}}')
-    
+
     return threagile_dir
 
 
@@ -168,5 +167,5 @@ def mock_config():
     config.store_github_enabled = False
     config.allowed_paths = "/tmp/test-models"
     config.get_available_methods.return_value = ["local", "server"]
-    
+
     return config

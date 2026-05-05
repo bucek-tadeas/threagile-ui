@@ -99,24 +99,44 @@ Run `make help` or just `make` to see all available commands.
 
 | Variable | Default | Required When | Description |
 |---|---|---|---|
+| `HOST` | `0.0.0.0` | Never (optional) | Host to bind the backend server to |
+| `PORT` | `8000` | Never (optional) | Port to run the backend server on |
+| `CORS_ORIGINS` | `http://127.0.0.1:5173,http://localhost:5173` | Never (optional) | Comma-separated allowed CORS origins |
+| `FRONTEND_URL` | `http://localhost:5173` | Never (optional) | Frontend URL for OAuth redirect after GitHub login |
 | `USING_LOCAL_STORAGE` | `true` | Always | Enable local storage execution |
 | `USING_GITHUB` | `true` | Always | Enable GitHub integration |
-| `STORE_LOCAL_ENABLED` | `true` | `USING_LOCAL_STORAGE=true` | Enable local execution in backend |
-| `STORE_GITHUB_ENABLED` | `true` | `USING_GITHUB=true` | Enable GitHub execution in backend |
+| `THREAGILE_DIRECTORY` | — | Always | Path to threagile installation |
+| `STORE_LOCAL_ENABLED` | `true` | Never (optional) | Enable local execution in backend |
+| `STORE_GITHUB_ENABLED` | `true` | Never (optional) | Enable GitHub execution in backend |
 | `ALLOWED_PATHS` | — | `USING_LOCAL_STORAGE=true` | Comma-separated allowed base paths |
 | `GITHUB_CLIENT_ID` | — | `USING_GITHUB=true` | GitHub OAuth client ID |
 | `GITHUB_CLIENT_SECRET` | — | `USING_GITHUB=true` | GitHub OAuth client secret |
 | `GITHUB_REDIRECT_URI` | — | `USING_GITHUB=true` | GitHub OAuth redirect URI |
 | `GITHUB_ORG_URI` | — | `USING_GITHUB=true` | GitHub org API URI |
-| `THREAGILE_DIRECTORY` | — | Always | Path to threagile installation |
-| `SESSION_TTL_SECONDS` | `43200` | No | Session TTL (default 12h) |
-| `COOKIE_SECURE` | `false` | No | Set `true` for HTTPS |
-| `COOKIE_SAMESITE` | `lax` | No | `lax`, `strict`, or `none` |
+| `GITHUB_PR_ENABLED` | `true` | Never (optional) | Enable PR creation for GitHub execution |
+| `GITHUB_PR_BRANCH_PREFIX` | `threat-model-pr` | Never (optional) | Branch name prefix for execution PRs |
+| `GITHUB_PR_TITLE_TEMPLATE` | `Threat model update: {model_name} ({timestamp})` | Never (optional) | PR title template (`{model_name}`, `{timestamp}` interpolated) |
+| `GITHUB_PR_BODY_TEMPLATE` | `Automated threat model execution artifacts for {model_name}.\nGenerated at {timestamp} UTC.` | Never (optional) | PR body template (`{model_name}`, `{timestamp}` interpolated) |
+| `GITHUB_RESULT_DEFAULT_FILE` | `.threatmodel/threatmodel.yaml` | Never (optional) | Default path for result file in GitHub repo |
+| `SESSION_TTL_SECONDS` | `43200` | Never (optional) | Session TTL (default 12h) |
+| `SESSION_STORE` | `memory` | Never (optional) | Session backend: `memory` (dev) or `file` (production) |
+| `SESSION_FILE_PATH` | `sessions.json` | `SESSION_STORE=file` | Path to persistent session JSON file |
+| `COOKIE_SECURE` | `false` | Never (optional) | Set `true` for HTTPS |
+| `COOKIE_SAMESITE` | `lax` | Never (optional) | `lax`, `strict`, or `none` |
+
+### Frontend Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `VITE_API_BASE_URL` | `http://localhost:8000` | Backend API URL used by the frontend. Set in a `.env` file in `frontend/` or at build time. |
 
 ### Example Configurations
 
 **Full feature set (development):**
 ```bash
+HOST=0.0.0.0
+PORT=8000
+CORS_ORIGINS=http://127.0.0.1:5173,http://localhost:5173
 USING_LOCAL_STORAGE=true
 USING_GITHUB=true
 STORE_LOCAL_ENABLED=true
@@ -137,7 +157,7 @@ ALLOWED_PATHS=/path/to/models
 THREAGILE_DIRECTORY=/path/to/threagile
 ```
 
-**Minimal (browser download only):**
+**Minimal (no remote storage):**
 ```bash
 USING_LOCAL_STORAGE=false
 USING_GITHUB=false
@@ -152,11 +172,10 @@ The `GET /execution-methods` endpoint returns which methods are available based 
 
 | Method | Description | Available When |
 |---|---|---|
-| `local` | Browser download | Always |
 | `server` | Save on backend host | `USING_LOCAL_STORAGE=true` and `STORE_LOCAL_ENABLED=true` |
 | `github` | Save to GitHub | `USING_GITHUB=true` and `STORE_GITHUB_ENABLED=true` |
 
-The execution dialog in the UI only displays checkboxes for the methods returned by this endpoint.
+The execution dialog in the UI only displays checkboxes for the methods returned by this endpoint. YAML export (browser download) is available separately via the "Export YAML" button.
 
 ---
 

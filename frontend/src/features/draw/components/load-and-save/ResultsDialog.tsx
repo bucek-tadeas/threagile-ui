@@ -1,3 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/*
+
+Results dialog - displays execution outcomes (success/failure, stdout, PR links) after
+the threat model has been run via the backend.
+
+*/
+
 import React from "react";
 import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
 

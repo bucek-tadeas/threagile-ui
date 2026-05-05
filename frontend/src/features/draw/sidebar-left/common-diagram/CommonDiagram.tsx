@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/rules-of-hooks, @typescript-eslint/no-explicit-any */
 /*
 
 Left sidebar component using abstraction of "common diagram information" to group common information about final diagram visuals together

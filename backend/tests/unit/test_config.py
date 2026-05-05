@@ -7,7 +7,7 @@ Tests configuration loading, validation, and feature flag behavior.
 import os
 import pytest
 from unittest.mock import patch
-from app.config import Config, get_config
+from app.config import Config
 from app.errors import ConfigurationException
 
 
@@ -22,7 +22,7 @@ class TestConfigValidation:
             "GITHUB_REDIRECT_URI": "http://test",
             "GITHUB_ORG_URI": "http://test-org",
         })
-        
+
         with patch.dict(os.environ, env_vars, clear=True):
             config = Config()
             assert config.using_local_storage is True
@@ -52,7 +52,7 @@ class TestConfigValidation:
             "USING_GITHUB": "false",
             "THREAGILE_DIRECTORY": "/tmp/threagile",
         }
-        
+
         with patch.dict(os.environ, env_vars, clear=True):
             config = Config()
             assert config.using_local_storage is False
@@ -72,7 +72,7 @@ class TestConfigValidation:
             "USING_GITHUB": "true",
             "THREAGILE_DIRECTORY": "/tmp/threagile",
         }
-        
+
         with patch.dict(os.environ, env_vars, clear=True):
             with pytest.raises(ConfigurationException) as exc_info:
                 Config()
@@ -85,7 +85,7 @@ class TestConfigValidation:
             "USING_GITHUB": "false",
             "THREAGILE_DIRECTORY": "/tmp/threagile",
         }
-        
+
         with patch.dict(os.environ, env_vars, clear=True):
             with pytest.raises(ConfigurationException) as exc_info:
                 Config()
@@ -102,40 +102,37 @@ class TestGetAvailableMethods:
             "GITHUB_REDIRECT_URI": "http://test",
             "GITHUB_ORG_URI": "http://test-org",
         })
-        
+
         with patch.dict(os.environ, env_vars, clear=True):
             config = Config()
             methods = config.get_available_methods()
-            assert "local" in methods
             assert "server" in methods
             assert "github" in methods
 
-    def test_only_local_method_when_features_disabled(self):
+    def test_no_methods_when_features_disabled(self):
         env_vars = {
             "USING_LOCAL_STORAGE": "false",
             "USING_GITHUB": "false",
             "THREAGILE_DIRECTORY": "/tmp/threagile",
         }
-        
+
         with patch.dict(os.environ, env_vars, clear=True):
             config = Config()
             methods = config.get_available_methods()
-            assert methods == ["local"]
+            assert methods == []
 
     def test_server_method_when_local_enabled(self, test_env_vars):
         with patch.dict(os.environ, test_env_vars, clear=True):
             config = Config()
             methods = config.get_available_methods()
-            assert "local" in methods
             assert "server" in methods
 
     def test_no_server_when_store_local_disabled(self, test_env_vars):
         env_vars = {**test_env_vars, "STORE_LOCAL_ENABLED": "false"}
-        
+
         with patch.dict(os.environ, env_vars, clear=True):
             config = Config()
             methods = config.get_available_methods()
-            assert "local" in methods
             assert "server" not in methods
 
 
@@ -144,7 +141,7 @@ class TestConfigDefaults:
     def test_default_session_ttl(self, test_env_vars):
         env_vars = dict(test_env_vars)
         del env_vars["SESSION_TTL_SECONDS"]
-        
+
         with patch.dict(os.environ, env_vars, clear=True):
             config = Config()
             assert config.session_ttl_seconds == 43200
@@ -152,7 +149,7 @@ class TestConfigDefaults:
     def test_default_cookie_secure(self, test_env_vars):
         env_vars = dict(test_env_vars)
         del env_vars["COOKIE_SECURE"]
-        
+
         with patch.dict(os.environ, env_vars, clear=True):
             config = Config()
             assert config.cookie_secure is False
@@ -160,14 +157,14 @@ class TestConfigDefaults:
     def test_default_cookie_samesite(self, test_env_vars):
         env_vars = dict(test_env_vars)
         del env_vars["COOKIE_SAMESITE"]
-        
+
         with patch.dict(os.environ, env_vars, clear=True):
             config = Config()
             assert config.cookie_samesite == "lax"
 
     def test_invalid_cookie_samesite_falls_back_to_lax(self, test_env_vars):
         env_vars = {**test_env_vars, "COOKIE_SAMESITE": "invalid"}
-        
+
         with patch.dict(os.environ, env_vars, clear=True):
             config = Config()
             assert config.cookie_samesite == "lax"

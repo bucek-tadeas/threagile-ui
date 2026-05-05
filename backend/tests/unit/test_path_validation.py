@@ -1,7 +1,7 @@
 """
 Unit tests for path validation and sanitization.
 
-CRITICAL SECURITY TESTS - These test protection against path traversal attacks.
+Security tests - These test protection against path traversal attacks.
 """
 
 import os
@@ -44,7 +44,7 @@ class TestStoreThreatModelPathValidation:
     def test_get_allowed_paths_with_valid_paths(self, tmp_allowed_path):
         import app.config
         app.config._config = None
-        
+
         with patch.dict(os.environ, {
             "USING_LOCAL_STORAGE": "true",
             "ALLOWED_PATHS": str(tmp_allowed_path),
@@ -58,9 +58,9 @@ class TestStoreThreatModelPathValidation:
     def test_get_allowed_paths_creates_missing_dirs(self, tmp_path):
         import app.config
         app.config._config = None
-        
+
         new_path = tmp_path / "new_allowed_path"
-        
+
         with patch.dict(os.environ, {
             "USING_LOCAL_STORAGE": "true",
             "ALLOWED_PATHS": str(new_path),
@@ -74,7 +74,7 @@ class TestStoreThreatModelPathValidation:
     def test_get_allowed_paths_empty_when_disabled(self):
         import app.config
         app.config._config = None
-        
+
         with patch.dict(os.environ, {
             "USING_LOCAL_STORAGE": "false",
             "USING_GITHUB": "false",
@@ -92,12 +92,12 @@ class TestStoreThreatModelPathValidation:
             "THREAGILE_DIRECTORY": str(tmp_threagile_dir),
         }):
             store = StoreThreatModel()
-            
+
             result = store.store_local(
                 str(tmp_threagile_dir),
                 str(tmp_allowed_path / "nonexistent.yaml")
             )
-            
+
             assert result["success"] is False
             assert "not found" in result["message"].lower()
 
@@ -113,7 +113,7 @@ class TestPathResolution:
     def test_resolve_handles_symlinks(self, tmp_path):
         real_dir = tmp_path / "real"
         real_dir.mkdir()
-        
+
         link_dir = tmp_path / "link"
         try:
             link_dir.symlink_to(real_dir)
@@ -124,7 +124,7 @@ class TestPathResolution:
     def test_path_comparison_normalized(self, tmp_path):
         path1 = tmp_path / "dir1" / ".." / "dir2" / "file.yaml"
         path2 = tmp_path / "dir2" / "file.yaml"
-        
+
         assert path1.resolve() == path2.resolve()
 
 
@@ -141,7 +141,7 @@ class TestSecurityScenarios:
             malicious = "C:\\Windows\\System32\\config\\sam"
         else:
             malicious = "/etc/shadow"
-        
+
         result = secure_sanitize_filepath(malicious)
         assert not os.path.isabs(result)
 
@@ -150,7 +150,7 @@ class TestSecurityScenarios:
             "..%2F..%2Fetc%2Fpasswd",
             "..\\//..\\/etc/passwd",
         ]
-        
+
         for malicious in malicious_variants:
             result = secure_sanitize_filepath(malicious)
             assert ".." not in result

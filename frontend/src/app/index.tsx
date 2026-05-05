@@ -1,3 +1,9 @@
+/*
+
+Root render - mounts the App component into the DOM with MUI dark theme and React StrictMode.
+
+*/
+
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'

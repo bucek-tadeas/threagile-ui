@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
 /* 
 
 Index page for modelling. The page consists of couple of logical parts:
@@ -38,6 +39,7 @@ import { getAllTechnicalAssets, getAllTrustBoundaries, getAllCommunicationLinks 
 import { technicalAssetStyles } from "@components/styles/assetVertexStyles";
 import type { TechnicalAssetTypeType } from "@components/types/threagileEnums";
 import { deserializeGraph } from "./components/load-and-save/utils/deserialize";
+import { serializeGraph } from "./components/load-and-save/utils/serialize";
 import { useCascadingCleanup } from "./hooks/useCascadingCleanup";
 import { useNotification } from "@context/NotificationContext";
 
@@ -217,20 +219,12 @@ const DrawPage = () => {
             risksIdentifiedProvider,
           }
         );
-        localStorage.removeItem("unsaved-diagram");
       } catch (error) {
         console.error("Failed to restore unsaved diagram:", error);
         localStorage.removeItem("unsaved-diagram");
       }
     }
-  }, [
-    dataAssetProvider,
-    graph,
-    individualRiskCategoriesProvider,
-    risksIdentifiedProvider,
-    riskTrackingProvider,
-    sharedRuntimesProvider,
-  ]);
+  }, [graph]);
 
   useCascadingCleanup({
     graph,
@@ -245,6 +239,37 @@ const DrawPage = () => {
     sharedRuntimesProvider,
     risksIdentifiedProvider,
   });
+
+  useEffect(() => {
+    if (!graph) return;
+
+    const timeout = setTimeout(() => {
+      try {
+        const data = serializeGraph(graph, commonInformation, commonDiagram, {
+          riskTrackingProvider,
+          individualRiskCategoriesProvider,
+          sharedRuntimesProvider,
+          dataAssetProvider,
+          risksIdentifiedProvider,
+        });
+        localStorage.setItem("unsaved-diagram", JSON.stringify(data));
+      } catch {
+        // Silently fail - don't interrupt user workflow
+      }
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [
+    graph,
+    graphVersion,
+    commonInformation,
+    commonDiagram,
+    riskTrackingProvider.elements,
+    individualRiskCategoriesProvider.elements,
+    sharedRuntimesProvider.elements,
+    dataAssetProvider.elements,
+    risksIdentifiedProvider.elements,
+  ]);
 
   return (
     <Box sx={{ display: "flex", height: "90vh" }}>

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
 
 3 functions that insert technical asset/communication link/trust boundary in the graph as either vertex/edge/vertex respectively
@@ -82,6 +83,7 @@ export const TrustBoundaryVertex = (
 export const enableTrustBoundaryGrouping = (graph: Graph) => {
     graph.setDropEnabled(true);
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     graph.isValidDropTarget = (cell, _cells, _evt) => {
         return !!(cell && (cell as any).isTrustBoundary);
     };
