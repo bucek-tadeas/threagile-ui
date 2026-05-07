@@ -59,7 +59,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
                     sx={{ width: "100%", maxWidth: 600, whiteSpace: "pre-wrap", wordBreak: "break-word" }}
                 >
                     {notification?.title && <AlertTitle>{notification.title}</AlertTitle>}
-                    <Box>{notification?.message}</Box>
+                    <Box sx={{ maxHeight: 300, overflowY: "auto" }}>{notification?.message}</Box>
                 </Alert>
             </Snackbar>
         </NotificationContext.Provider>
