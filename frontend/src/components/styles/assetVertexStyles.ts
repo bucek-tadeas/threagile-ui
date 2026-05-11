@@ -2,8 +2,6 @@
 
 Styling for the whole page
 
-TBD // TODO
-
 */
 
 export const technicalAssetStyles: Record<string, object> = {

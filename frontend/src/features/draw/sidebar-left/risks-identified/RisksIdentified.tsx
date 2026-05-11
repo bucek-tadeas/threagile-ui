@@ -32,7 +32,6 @@ import { Button, Accordion, AccordionSummary, AccordionDetails, Typography } fro
 import { useDataAssets, useRisksIdentified, useSharedRuntimes } from "@context/ThreatModelContext";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useThreatModel } from "@context/ThreatModelContext";
-
 import { RisksIdentifiedRequirements } from "@components/types/threagileComponentsRequirements";
 import type { CommunicationLink, DataAsset, SharedRuntimes, TechnicalAsset, TrustBoundary } from "@components/types/threagileComponents";
 

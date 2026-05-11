@@ -40,7 +40,6 @@ from app.session_store import create_session_store
 
 router = APIRouter()
 
-# Load configuration
 config = get_config()
 
 sessions = create_session_store()
