@@ -67,6 +67,10 @@ setup-backend:
 	fi
 	@cd backend && . ./venv/bin/activate && pip install --upgrade pip
 	@cd backend && . ./venv/bin/activate && pip install -r requirements.txt -r requirements-dev.txt
+	@if [ ! -f "backend/.env" ]; then \
+		echo "Creating .env from .env.example..."; \
+		cp backend/.env.example backend/.env; \
+	fi
 	@echo "Backend setup complete"
 
 setup-frontend:
@@ -249,6 +253,7 @@ clean-all: clean
 check:
 	@echo "Checking prerequisites..."
 	@command -v python3 >/dev/null 2>&1 || { echo "python3 not found"; exit 1; }
+	@python3 -c 'import venv' 2>/dev/null || { echo "python3-venv not found - install it with: sudo apt install python3-venv"; exit 1; }
 	@command -v node >/dev/null 2>&1 || { echo "node not found"; exit 1; }
 	@command -v npm >/dev/null 2>&1 || { echo "npm not found"; exit 1; }
 	@command -v docker >/dev/null 2>&1 || { echo "docker not found (required for execution)"; }
