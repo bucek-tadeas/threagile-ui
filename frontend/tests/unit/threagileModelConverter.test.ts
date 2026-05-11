@@ -250,11 +250,9 @@ describe('convertNativeThreagileToDigramFile', () => {
         expect(dmz.trustBoundary.id).toBe("dmz");
         expect(dmz.trustBoundary.type).toBe("network-cloud-provider");
 
-        // Web App should have DMZ as parent
         const webApp = result.technical_assets.find(ta => ta.technicalAsset.id === "web-app")!;
         expect(webApp.parentId).toBe(dmz.internalId);
 
-        // Database should have Internal as parent
         const internal = result.trust_boundaries.find(tb => tb.trustBoundary.name === "Internal")!;
         const db = result.technical_assets.find(ta => ta.technicalAsset.id === "database")!;
         expect(db.parentId).toBe(internal.internalId);
