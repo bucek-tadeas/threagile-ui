@@ -11,14 +11,14 @@ describe('APIClient', () => {
 
     beforeEach(() => {
         client = new APIClient('http://localhost:8000');
-        global.fetch = vi.fn();
+        globalThis.fetch = vi.fn() as any;
     });
 
     describe('getExecutionMethods', () => {
         it('fetches execution methods from API', async () => {
             const mockResponse = { methods: ['local', 'server'] };
 
-            (global.fetch as any).mockResolvedValueOnce({
+            (globalThis.fetch as any).mockResolvedValueOnce({
                 ok: true,
                 json: async () => mockResponse,
             });
@@ -26,7 +26,7 @@ describe('APIClient', () => {
             const result = await client.getExecutionMethods();
 
             expect(result).toEqual(mockResponse);
-            expect(global.fetch).toHaveBeenCalledWith(
+            expect(globalThis.fetch).toHaveBeenCalledWith(
                 'http://localhost:8000/execution-methods',
                 expect.objectContaining({
                     method: 'GET',
@@ -35,7 +35,7 @@ describe('APIClient', () => {
         });
 
         it('throws error on failed request', async () => {
-            (global.fetch as any).mockResolvedValueOnce({
+            (globalThis.fetch as any).mockResolvedValueOnce({
                 ok: false,
                 status: 500,
                 text: async () => 'Server error',
@@ -49,7 +49,7 @@ describe('APIClient', () => {
         it('fetches local paths from API', async () => {
             const mockResponse = { paths: ['/path1', '/path2'] };
 
-            (global.fetch as any).mockResolvedValueOnce({
+            (globalThis.fetch as any).mockResolvedValueOnce({
                 ok: true,
                 json: async () => mockResponse,
             });
@@ -57,7 +57,7 @@ describe('APIClient', () => {
             const result = await client.getLocalPaths();
 
             expect(result).toEqual(mockResponse);
-            expect(global.fetch).toHaveBeenCalledWith(
+            expect(globalThis.fetch).toHaveBeenCalledWith(
                 'http://localhost:8000/local-paths',
                 expect.any(Object)
             );
@@ -75,7 +75,7 @@ describe('APIClient', () => {
 
             const mockResponse = { success: true, execution_results: {} };
 
-            (global.fetch as any).mockResolvedValueOnce({
+            (globalThis.fetch as any).mockResolvedValueOnce({
                 ok: true,
                 json: async () => mockResponse,
             });
@@ -83,7 +83,7 @@ describe('APIClient', () => {
             const result = await client.executeThreatModel(mockConfig);
 
             expect(result).toEqual(mockResponse);
-            expect(global.fetch).toHaveBeenCalledWith(
+            expect(globalThis.fetch).toHaveBeenCalledWith(
                 'http://localhost:8000/execute-threat-model',
                 expect.objectContaining({
                     method: 'POST',
@@ -101,7 +101,7 @@ describe('APIClient', () => {
         it('fetches current user info', async () => {
             const mockResponse = { login: 'testuser' };
 
-            (global.fetch as any).mockResolvedValueOnce({
+            (globalThis.fetch as any).mockResolvedValueOnce({
                 ok: true,
                 json: async () => mockResponse,
             });
@@ -114,7 +114,7 @@ describe('APIClient', () => {
 
     describe('getGithubFiles', () => {
         it('normalizes backend paths response to files', async () => {
-            (global.fetch as any).mockResolvedValueOnce({
+            (globalThis.fetch as any).mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ paths: ['models/threatmodel.yaml'] }),
             });
@@ -122,7 +122,7 @@ describe('APIClient', () => {
             const result = await client.getGithubFiles('org/repo', 'main');
 
             expect(result).toEqual({ files: ['models/threatmodel.yaml'] });
-            expect(global.fetch).toHaveBeenCalledWith(
+            expect(globalThis.fetch).toHaveBeenCalledWith(
                 'http://localhost:8000/github-files?repo=org%2Frepo&branch=main',
                 expect.any(Object)
             );
@@ -131,14 +131,14 @@ describe('APIClient', () => {
 
     describe('request with credentials', () => {
         it('includes credentials in all requests', async () => {
-            (global.fetch as any).mockResolvedValueOnce({
+            (globalThis.fetch as any).mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({}),
             });
 
             await client.getExecutionMethods();
 
-            expect(global.fetch).toHaveBeenCalledWith(
+            expect(globalThis.fetch).toHaveBeenCalledWith(
                 expect.any(String),
                 expect.objectContaining({
                     credentials: 'include',
