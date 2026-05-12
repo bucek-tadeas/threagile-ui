@@ -55,3 +55,6 @@ pytest_cache/
 
 # Threagile store
 backend/models
+
+# Backend tmp files
+backend/tmp/
